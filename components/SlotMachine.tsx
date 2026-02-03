@@ -13,32 +13,51 @@ interface Participant {
 interface SlotMachineProps {
   participants: Participant[];
   isRolling: boolean;
+  isPaused?: boolean;
   onComplete: (participant: Participant) => void;
 }
 
-export default function SlotMachine({ participants, isRolling, onComplete }: SlotMachineProps) {
+export default function SlotMachine({ participants, isRolling, isPaused = false, onComplete }: SlotMachineProps) {
   // Initial name is random
   const [currentIndex, setCurrentIndex] = useState(() =>
     participants.length > 0 ? Math.floor(Math.random() * participants.length) : 0
   );
 
   const [internalIsRolling, setInternalIsRolling] = useState(false);
+  const elapsedRef = useRef(0);
+  const lastUpdateRef = useRef(0);
+  const targetIdxRef = useRef<number | null>(null);
+  const startTimeRef = useRef(0);
+  const lastStepRef = useRef(0);
 
   useEffect(() => {
-    if (!isRolling || participants.length === 0 || internalIsRolling) {
-      if (!isRolling) setInternalIsRolling(false);
+    if (!isRolling) {
+      setInternalIsRolling(false);
+      elapsedRef.current = 0;
+      targetIdxRef.current = null;
+      return;
+    }
+
+    if (isPaused) {
       return;
     }
 
     setInternalIsRolling(true);
     let timeoutId: NodeJS.Timeout;
 
-    // 1. DURATION: 5 Seconds exactly
+    // 1. DURATION: 7 Seconds exactly
     const DURATION = 7000;
-    const startTime = Date.now();
 
-    // 2. TARGET: Pick a random target from ALL for the "gambling" feel
-    const targetIdx = Math.floor(Math.random() * participants.length);
+    // Initialize or continue
+    if (startTimeRef.current === 0 || targetIdxRef.current === null) {
+      startTimeRef.current = Date.now() - elapsedRef.current;
+      targetIdxRef.current = Math.floor(Math.random() * participants.length);
+    } else {
+      // Resume: Shift start time to account for pause duration
+      startTimeRef.current = Date.now() - elapsedRef.current;
+    }
+
+    const targetIdx = targetIdxRef.current;
     const targetParticipant = participants[targetIdx];
 
     // Calculate total steps needed to reach target after at least a few full spins
@@ -46,26 +65,31 @@ export default function SlotMachine({ participants, isRolling, onComplete }: Slo
     const distanceToTarget = (targetIdx - currentIndex + participants.length) % participants.length;
     const totalSteps = (participants.length * rotations) + distanceToTarget;
 
-    let lastStep = 0;
+    if (elapsedRef.current === 0) {
+      lastStepRef.current = 0;
+    }
 
     const animate = () => {
-      const elapsed = Date.now() - startTime;
+      if (isPaused) return;
+
+      const now = Date.now();
+      const elapsed = now - startTimeRef.current;
+      elapsedRef.current = elapsed;
+
       const progress = Math.min(elapsed / DURATION, 1);
 
       if (progress < 1) {
-        // QUADRATIC EASE OUT (Starts at 100%, gradually decreases to 0% at exactly 5s)
+        // QUADRATIC EASE OUT (Starts at 100%, gradually decreases to 0% at exactly 7s)
         const easedProgress = progress * (2 - progress);
         const currentStep = Math.floor(totalSteps * easedProgress);
 
-        if (currentStep > lastStep) {
-          setCurrentIndex((prev) => (prev + (currentStep - lastStep)) % participants.length);
-          lastStep = currentStep;
+        if (currentStep > lastStepRef.current) {
+          setCurrentIndex((prev) => (prev + (currentStep - lastStepRef.current)) % participants.length);
+          lastStepRef.current = currentStep;
         }
 
         // Calculate next delay based on the local slope of the ease-out curve
-        // The closer to 5s, the slower the steps.
         const remainingProgress = 1 - progress;
-        // Base delay is 50ms, increases as we approach the end
         const delay = 50 + (1 - remainingProgress) * 500;
 
         timeoutId = setTimeout(animate, Math.min(delay, 200));
@@ -77,6 +101,10 @@ export default function SlotMachine({ participants, isRolling, onComplete }: Slo
         timeoutId = setTimeout(() => {
           setInternalIsRolling(false);
           onComplete(targetParticipant);
+          // Reset for next potential roll
+          elapsedRef.current = 0;
+          startTimeRef.current = 0;
+          targetIdxRef.current = null;
         }, 800);
       }
     };
@@ -86,7 +114,7 @@ export default function SlotMachine({ participants, isRolling, onComplete }: Slo
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [isRolling, participants.length]);
+  }, [isRolling, isPaused, participants.length]);
 
   if (participants.length === 0) {
     return (
