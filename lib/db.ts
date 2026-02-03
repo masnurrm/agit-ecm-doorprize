@@ -56,12 +56,12 @@ export const participantsDb = {
     return db.prepare('SELECT * FROM participants WHERE is_winner = 0 ORDER BY name').all();
   },
 
-  create: (id: string, name: string, nim: string) => {
-    return db.prepare('INSERT INTO participants (id, name, nim) VALUES (?, ?, ?)').run(id, name, nim);
+  create: (id: string, name: string, nim: string, isWinner: number = 0) => {
+    return db.prepare('INSERT INTO participants (id, name, nim, is_winner) VALUES (?, ?, ?, ?)').run(id, name, nim, isWinner);
   },
 
-  update: (id: string, name: string, nim: string) => {
-    return db.prepare('UPDATE participants SET name = ?, nim = ? WHERE id = ?').run(name, nim, id);
+  update: (id: string, name: string, nim: string, isWinner: number) => {
+    return db.prepare('UPDATE participants SET name = ?, nim = ?, is_winner = ? WHERE id = ?').run(name, nim, isWinner, id);
   },
 
   delete: (id: string) => {
