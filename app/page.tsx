@@ -544,7 +544,16 @@ export default function Home() {
                 className="relative w-full max-w-6xl max-h-full flex flex-col items-center overflow-y-auto no-scrollbar"
               >
                 {/* Sticky Header and Slot Machine Area */}
-                <div className="sticky top-0 z-20 w-full flex flex-col items-center pt-2 pb-6 space-y-4 bg-black/40 backdrop-blur-md border-b border-showman-gold/10">
+                <div className="sticky top-0 z-20 w-full flex flex-col items-center pt-2 pb-2 space-y-2 bg-black/40 backdrop-blur-md border-b border-showman-gold/10">
+                  {/* Sticky Winners Counter (Top-Left) - Only during active roll sequence */}
+                  {isSequenceActive && (
+                    <div className="absolute left-4 top-4 flex items-center bg-showman-gold/10 backdrop-blur-md border border-showman-gold/30 rounded-full px-3 py-1.5 z-30">
+                      <Trophy className="w-4 h-4 mr-2 text-showman-gold animate-pulse" />
+                      <span className="text-showman-gold font-black text-xs uppercase tracking-widest">
+                        Winners: {tentativeWinners.length} / {quantity}
+                      </span>
+                    </div>
+                  )}
                   {/* Overlay Header */}
                   <div className="text-center space-y-2">
                     <h2 className="text-3xl sm:text-4xl font-black text-showman-gold uppercase tracking-[0.2em] drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">
@@ -592,12 +601,13 @@ export default function Home() {
                 </div>
 
                 {/* Results Section in Overlay */}
-                <div className="w-full space-y-6 px-4 sm:px-10 py-10">
-                  <div className="flex flex-col items-center justify-center gap-6 border-b border-showman-gold/20 pb-8">
-                    <h3 className="text-2xl font-black text-showman-gold flex items-center uppercase tracking-widest">
-                      <Trophy className="w-6 h-6 mr-3 text-showman-gold" />
-                      {tentativeWinners.length === quantity ? 'Final Winners List' : `Winners (${tentativeWinners.length}/${quantity})`}
-                    </h3>
+                <div className="w-full space-y-2 px-4 sm:px-10 py-2">
+                  <div className="flex flex-col items-center justify-center gap-6 border-b border-showman-gold/20 pb-4">
+                    {!isSequenceActive && (
+                      <h3 className="text-xl font-black text-showman-gold flex items-center uppercase tracking-widest">
+                        {tentativeWinners.length === quantity ? 'Final Winners List' : 'Current Winners'}
+                      </h3>
+                    )}
 
                     <div className="flex flex-col items-center gap-4 w-full max-w-2xl px-4">
                       {!isSequenceActive && (
@@ -637,6 +647,16 @@ export default function Home() {
                               <span>Roll Lagi</span>
                             </motion.button>
                           )}
+                        </div>
+                      )}
+
+                      {/* Winners Count - Centered when sequence complete */}
+                      {!isSequenceActive && tentativeWinners.length > 0 && (
+                        <div className="flex items-center space-x-2 text-showman-gold/60">
+                          <Trophy className="w-4 h-4" />
+                          <span className="text-sm font-black uppercase tracking-[0.2em]">
+                            Winners: {tentativeWinners.length} / {quantity}
+                          </span>
                         </div>
                       )}
 
