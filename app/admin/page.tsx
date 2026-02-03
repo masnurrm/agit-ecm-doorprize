@@ -153,12 +153,12 @@ export default function AdminPage() {
     setEditingItem(item);
     if (item) {
       if (type === 'participant') {
-        setFormData({ name: item.name, nim: item.nim });
+        setFormData({ name: item.name, nim: item.nim, is_winner: item.is_winner });
       } else {
         setFormData({ prizeName: item.prize_name, quota: item.initial_quota });
       }
     } else {
-      setFormData(type === 'participant' ? { name: '', nim: '' } : { prizeName: '', quota: 1 });
+      setFormData(type === 'participant' ? { name: '', nim: '', is_winner: 0 } : { prizeName: '', quota: 1 });
     }
     setIsModalOpen(true);
   };
@@ -694,6 +694,17 @@ export default function AdminPage() {
                         value={formData.nim || ''}
                         onChange={(e) => setFormData({ ...formData, nim: e.target.value })}
                       />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-showman-gold-cream mb-1">Status</label>
+                      <select
+                        className="w-full px-4 py-2 border-2 border-showman-gold/30 bg-showman-black-lighter text-white rounded-lg focus:ring-2 focus:ring-showman-gold focus:border-showman-gold outline-none transition-all"
+                        value={formData.is_winner || 0}
+                        onChange={(e) => setFormData({ ...formData, is_winner: parseInt(e.target.value) })}
+                      >
+                        <option value={0}>Eligible</option>
+                        <option value={1}>Winner</option>
+                      </select>
                     </div>
                   </>
                 )}

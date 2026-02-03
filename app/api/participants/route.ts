@@ -15,14 +15,14 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { name, nim } = await request.json();
+    const { name, nim, is_winner } = await request.json();
 
     if (!name || !nim) {
       return NextResponse.json({ success: false, error: 'Name and NIM are required' }, { status: 400 });
     }
 
     const id = `participant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    participantsDb.create(id, name, nim);
+    participantsDb.create(id, name, nim, is_winner !== undefined ? is_winner : 0);
 
     return NextResponse.json({ success: true, message: 'Participant added successfully' });
   } catch (error: any) {
@@ -32,13 +32,15 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    const { id, name, nim } = await request.json();
+    const { id, name, nim, is_winner } = await request.json();
 
     if (!id || !name || !nim) {
       return NextResponse.json({ success: false, error: 'ID, Name and NIM are required' }, { status: 400 });
     }
 
-    participantsDb.update(id, name, nim);
+    // Default to 0 if not provided, or keep current if we wanted to be more sophisticated.
+    // But since the UI will always send it now, we can just use what's sent.
+    participantsDb.update(id, name, nim, is_winner !== undefined ? is_winner : 0);
 
     return NextResponse.json({ success: true, message: 'Participant updated successfully' });
   } catch (error: any) {
