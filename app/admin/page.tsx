@@ -42,6 +42,7 @@ export default function AdminPage() {
   // Form State
   const [formData, setFormData] = useState<any>({});
   const [loading, setLoading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const downloadTemplate = () => {
@@ -143,10 +144,22 @@ export default function AdminPage() {
     }
   };
 
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [activeTab]);
+
   const openModal = (type: 'participant' | 'prize', item: any = null) => {
     setModalType(type);
     setEditingItem(item);
-    setFormData(item || (type === 'participant' ? { name: '', nim: '' } : { prizeName: '', quota: 1 }));
+    if (item) {
+      if (type === 'participant') {
+        setFormData({ name: item.name, nim: item.nim });
+      } else {
+        setFormData({ prizeName: item.prize_name, quota: item.initial_quota });
+      }
+    } else {
+      setFormData(type === 'participant' ? { name: '', nim: '' } : { prizeName: '', quota: 1 });
+    }
     setIsModalOpen(true);
   };
 
@@ -155,6 +168,52 @@ export default function AdminPage() {
     setModalType(null);
     setEditingItem(null);
     setFormData({});
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    const currentItems = activeTab === 'participants' ? participants
+      : activeTab === 'prizes' ? prizes
+        : winners;
+
+    if (selectedIds.length === currentItems.length && currentItems.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(currentItems.map(item => item.id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected items?`)) return;
+
+    setLoading(true);
+    try {
+      const endpoint = activeTab === 'participants' ? '/api/participants'
+        : activeTab === 'prizes' ? '/api/prizes'
+          : '/api/winners';
+
+      const res = await fetch(`${endpoint}?id=${selectedIds.join(',')}`, {
+        method: 'DELETE',
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setSelectedIds([]);
+        loadData();
+      } else {
+        alert(data.error);
+      }
+    } catch (error) {
+      console.error('Error bulk deleting:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDelete = async (type: 'participant' | 'prize' | 'winner', id: string) => {
@@ -292,6 +351,17 @@ export default function AdminPage() {
                   <span>Refresh</span>
                 </button>
 
+                {selectedIds.length > 0 && (
+                  <button
+                    onClick={handleBulkDelete}
+                    disabled={loading}
+                    className="flex items-center space-x-2 bg-showman-red hover:bg-showman-red-dark text-white font-medium py-2 px-4 rounded-lg transition-all shadow-md border border-white/20"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete Selected ({selectedIds.length})</span>
+                  </button>
+                )}
+
                 {activeTab === 'participants' && (
                   <>
                     <input
@@ -354,6 +424,14 @@ export default function AdminPage() {
                 <table className="w-full">
                   <thead className="bg-showman-black-lighter border-b-2 border-showman-gold/50">
                     <tr>
+                      <th className="px-4 py-3 text-left">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-showman-gold/50 bg-showman-black-lighter text-showman-gold focus:ring-showman-gold"
+                          checked={participants.length > 0 && selectedIds.length === participants.length}
+                          onChange={toggleSelectAll}
+                        />
+                      </th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Name</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">NPK</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Status</th>
@@ -366,8 +444,16 @@ export default function AdminPage() {
                         key={participant.id}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="hover:bg-showman-black-lighter transition-colors"
+                        className={`hover:bg-showman-black-lighter transition-colors ${selectedIds.includes(participant.id) ? 'bg-showman-gold/5' : ''}`}
                       >
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 rounded border-showman-gold/50 bg-showman-black-lighter text-showman-gold focus:ring-showman-gold"
+                            checked={selectedIds.includes(participant.id)}
+                            onChange={() => toggleSelect(participant.id)}
+                          />
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap font-medium text-white">
                           {participant.name}
                         </td>
@@ -412,6 +498,14 @@ export default function AdminPage() {
                 <table className="w-full">
                   <thead className="bg-showman-black-lighter border-b-2 border-showman-gold/50">
                     <tr>
+                      <th className="px-4 py-3 text-left">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-showman-gold/50 bg-showman-black-lighter text-showman-gold focus:ring-showman-gold"
+                          checked={prizes.length > 0 && selectedIds.length === prizes.length}
+                          onChange={toggleSelectAll}
+                        />
+                      </th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Prize Name</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Initial</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Current</th>
@@ -425,8 +519,16 @@ export default function AdminPage() {
                         key={prize.id}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="hover:bg-showman-black-lighter transition-colors"
+                        className={`hover:bg-showman-black-lighter transition-colors ${selectedIds.includes(prize.id) ? 'bg-showman-gold/5' : ''}`}
                       >
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 rounded border-showman-gold/50 bg-showman-black-lighter text-showman-gold focus:ring-showman-gold"
+                            checked={selectedIds.includes(prize.id)}
+                            onChange={() => toggleSelect(prize.id)}
+                          />
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap font-medium text-white">
                           {prize.prize_name}
                         </td>
@@ -476,6 +578,14 @@ export default function AdminPage() {
                 <table className="w-full">
                   <thead className="bg-showman-black-lighter border-b-2 border-showman-gold/50">
                     <tr>
+                      <th className="px-4 py-3 text-left">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-showman-gold/50 bg-showman-black-lighter text-showman-gold focus:ring-showman-gold"
+                          checked={winners.length > 0 && selectedIds.length === winners.length}
+                          onChange={toggleSelectAll}
+                        />
+                      </th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Name</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">NPK</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Prize</th>
@@ -489,8 +599,16 @@ export default function AdminPage() {
                         key={winner.id}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="hover:bg-showman-black-lighter transition-colors"
+                        className={`hover:bg-showman-black-lighter transition-colors ${selectedIds.includes(winner.id) ? 'bg-showman-gold/5' : ''}`}
                       >
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 rounded border-showman-gold/50 bg-showman-black-lighter text-showman-gold focus:ring-showman-gold"
+                            checked={selectedIds.includes(winner.id)}
+                            onChange={() => toggleSelect(winner.id)}
+                          />
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap font-medium text-white">
                           {winner.name}
                         </td>

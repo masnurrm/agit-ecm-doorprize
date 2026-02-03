@@ -91,6 +91,14 @@ export const participantsDb = {
     });
     return insertMany(participants);
   },
+
+  deleteMany: (ids: string[]) => {
+    const deleteBtn = db.prepare('DELETE FROM participants WHERE id = ?');
+    const deleteTransaction = db.transaction((idList) => {
+      for (const id of idList) deleteBtn.run(id);
+    });
+    return deleteTransaction(ids);
+  },
 };
 
 // Prize operations
@@ -145,6 +153,14 @@ export const prizesDb = {
   deleteAll: () => {
     return db.prepare('DELETE FROM prizes').run();
   },
+
+  deleteMany: (ids: string[]) => {
+    const deleteBtn = db.prepare('DELETE FROM prizes WHERE id = ?');
+    const deleteTransaction = db.transaction((idList) => {
+      for (const id of idList) deleteBtn.run(id);
+    });
+    return deleteTransaction(ids);
+  },
 };
 
 // Winner operations
@@ -180,6 +196,14 @@ export const winnersDb = {
 
   deleteAll: () => {
     return db.prepare('DELETE FROM winners').run();
+  },
+
+  deleteMany: (ids: string[]) => {
+    const deleteBtn = db.prepare('DELETE FROM winners WHERE id = ?');
+    const deleteTransaction = db.transaction((idList) => {
+      for (const id of idList) deleteBtn.run(id);
+    });
+    return deleteTransaction(ids);
   },
 };
 
@@ -235,6 +259,32 @@ export function removeWinner(winnerId: string) {
       prizesDb.updateQuota(winner.prize_id, newQuota);
     }
 
+    return { success: true };
+  });
+
+  return transaction();
+}
+
+export function removeWinnersBulk(winnerIds: string[]) {
+  const transaction = db.transaction(() => {
+    for (const winnerId of winnerIds) {
+      // Get winner record to find participant and prize
+      const winner: any = winnersDb.getById(winnerId);
+      if (!winner) continue;
+
+      // Remove winner record
+      winnersDb.delete(winnerId);
+
+      // Reset participant status
+      participantsDb.markAsNotWinner(winner.participant_id);
+
+      // Increment prize quota
+      const prize: any = prizesDb.getById(winner.prize_id);
+      if (prize) {
+        const newQuota = prize.current_quota + 1;
+        prizesDb.updateQuota(winner.prize_id, newQuota);
+      }
+    }
     return { success: true };
   });
 
