@@ -52,6 +52,12 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: 'Prize ID is required' }, { status: 400 });
     }
 
+    if (id.includes(',')) {
+      const ids = id.split(',');
+      prizesDb.deleteMany(ids);
+      return NextResponse.json({ success: true, message: `${ids.length} prizes deleted successfully` });
+    }
+
     prizesDb.delete(id);
 
     return NextResponse.json({ success: true, message: 'Prize deleted successfully' });

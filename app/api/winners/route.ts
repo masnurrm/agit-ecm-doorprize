@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { winnersDb, removeWinner } from '@/lib/db';
+import { winnersDb, removeWinner, removeWinnersBulk } from '@/lib/db';
 
 export async function GET() {
   try {
@@ -17,6 +17,12 @@ export async function DELETE(request: Request) {
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Winner ID is required' }, { status: 400 });
+    }
+
+    if (id.includes(',')) {
+      const ids = id.split(',');
+      removeWinnersBulk(ids);
+      return NextResponse.json({ success: true, message: `${ids.length} winners removed and quotas restored` });
     }
 
     removeWinner(id);
