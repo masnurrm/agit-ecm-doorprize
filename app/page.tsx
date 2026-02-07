@@ -74,7 +74,38 @@ export default function Home() {
       const response = await fetch('/api/prizes/available');
       const data = await response.json();
       if (data.success) {
-        setPrizes(data.data);
+        // Custom order mapping
+        const prizeOrder = [
+          'sepeda listrik',
+          'magic com',
+          'rice cooker',
+          'setrika uap',
+          'chopper',
+          'blender',
+          'smart watch',
+          'smartwatch',
+          'tws',
+          'voucher belanja'
+        ];
+
+        const sortedPrizes = [...data.data].sort((a, b) => {
+          const nameA = a.prize_name.toLowerCase();
+          const nameB = b.prize_name.toLowerCase();
+
+          const indexA = prizeOrder.findIndex(term => nameA.includes(term));
+          const indexB = prizeOrder.findIndex(term => nameB.includes(term));
+
+          // If both found, sort by index
+          if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+          // If only A found, it comes first
+          if (indexA !== -1) return -1;
+          // If only B found, it comes first
+          if (indexB !== -1) return 1;
+          // Otherwise keep original order
+          return 0;
+        });
+
+        setPrizes(sortedPrizes);
         if (data.data.length > 0 && !selectedPrizeId) {
           // Cards start collapsed by default
           // setSelectedPrizeId(data.data[0].id);
