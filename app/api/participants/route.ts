@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { initDatabase, participantsDb } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 // Initialize database on first request
 initDatabase();
 
