@@ -24,10 +24,20 @@ export async function initDatabase() {
         id VARCHAR(255) PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         nim VARCHAR(255) NOT NULL,
+        category VARCHAR(100) DEFAULT 'Staff',
+        employment_type VARCHAR(100) DEFAULT 'AGIT',
         is_winner TINYINT(1) DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Add columns if they don't exist (primitive migration)
+    try {
+      await connection.query('ALTER TABLE participants ADD COLUMN category VARCHAR(100) DEFAULT "Staff"');
+    } catch (e) { }
+    try {
+      await connection.query('ALTER TABLE participants ADD COLUMN employment_type VARCHAR(100) DEFAULT "AGIT"');
+    } catch (e) { }
 
     // Create prizes table
     await connection.query(`
@@ -73,12 +83,17 @@ export const participantsDb = {
     return rows as any[];
   },
 
-  create: async (id: string, name: string, nim: string, isWinner: number = 0) => {
-    return pool.query('INSERT INTO participants (id, name, nim, is_winner) VALUES (?, ?, ?, ?)', [id, name, nim, isWinner]);
+  getByNim: async (nim: string) => {
+    const [rows]: any = await pool.query('SELECT * FROM participants WHERE nim = ?', [nim]);
+    return rows[0];
   },
 
-  update: async (id: string, name: string, nim: string, isWinner: number) => {
-    return pool.query('UPDATE participants SET name = ?, nim = ?, is_winner = ? WHERE id = ?', [name, nim, isWinner, id]);
+  create: async (id: string, name: string, nim: string, category: string = 'Staff', employmentType: string = 'AGIT', isWinner: number = 0) => {
+    return pool.query('INSERT INTO participants (id, name, nim, category, employment_type, is_winner) VALUES (?, ?, ?, ?, ?, ?)', [id, name, nim, category, employmentType, isWinner]);
+  },
+
+  update: async (id: string, name: string, nim: string, category: string, employmentType: string, isWinner: number) => {
+    return pool.query('UPDATE participants SET name = ?, nim = ?, category = ?, employment_type = ?, is_winner = ? WHERE id = ?', [name, nim, category, employmentType, isWinner, id]);
   },
 
   delete: async (id: string) => {
@@ -112,9 +127,9 @@ export const participantsDb = {
     }
   },
 
-  bulkCreate: async (participants: { id: string, name: string, nim: string }[]) => {
-    const values = participants.map(p => [p.id, p.name, p.nim]);
-    return pool.query('INSERT INTO participants (id, name, nim) VALUES ?', [values]);
+  bulkCreate: async (participants: { id: string, name: string, nim: string, category?: string, employment_type?: string }[]) => {
+    const values = participants.map(p => [p.id, p.name, p.nim, p.category || 'Staff', p.employment_type || 'AGIT']);
+    return pool.query('INSERT INTO participants (id, name, nim, category, employment_type) VALUES ?', [values]);
   },
 
   deleteMany: async (ids: string[]) => {

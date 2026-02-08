@@ -17,14 +17,21 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { name, nim, is_winner } = await request.json();
+    const { name, nim, category, employment_type, is_winner } = await request.json();
 
     if (!name || !nim) {
       return NextResponse.json({ success: false, error: 'Name and NIM are required' }, { status: 400 });
     }
 
     const id = `participant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    await participantsDb.create(id, name, nim, is_winner !== undefined ? is_winner : 0);
+    await participantsDb.create(
+      id,
+      name,
+      nim,
+      category || 'Staff',
+      employment_type || 'AGIT',
+      is_winner !== undefined ? is_winner : 0
+    );
 
     return NextResponse.json({ success: true, message: 'Participant added successfully' });
   } catch (error: any) {
@@ -34,13 +41,20 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    const { id, name, nim, is_winner } = await request.json();
+    const { id, name, nim, category, employment_type, is_winner } = await request.json();
 
     if (!id || !name || !nim) {
       return NextResponse.json({ success: false, error: 'ID, Name and NIM are required' }, { status: 400 });
     }
 
-    await participantsDb.update(id, name, nim, is_winner !== undefined ? is_winner : 0);
+    await participantsDb.update(
+      id,
+      name,
+      nim,
+      category || 'Staff',
+      employment_type || 'AGIT',
+      is_winner !== undefined ? is_winner : 0
+    );
 
     return NextResponse.json({ success: true, message: 'Participant updated successfully' });
   } catch (error: any) {

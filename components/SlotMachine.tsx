@@ -7,6 +7,8 @@ interface Participant {
   id: string;
   name: string;
   nim: string;
+  category: string;
+  employment_type: string;
   is_winner: number;
 }
 

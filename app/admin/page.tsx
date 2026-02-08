@@ -10,6 +10,8 @@ interface Participant {
   id: string;
   name: string;
   nim: string;
+  category: string;
+  employment_type: string;
   is_winner: number;
 }
 
@@ -72,7 +74,9 @@ export default function AdminPage() {
         const participantsToImport = jsonData
           .map((row: any) => ({
             name: (row['Nama Karyawan'] || row['name'] || row['Nama'])?.toString().trim(),
-            nim: (row['NPK'] || row['NIM'] || row['nim'])?.toString().trim()
+            nim: (row['NPK'] || row['NIM'] || row['nim'])?.toString().trim(),
+            category: (row['Category'] || row['Kategori'])?.toString().trim() || 'Staff',
+            employment_type: (row['Employment'] || row['Status'])?.toString().trim() || 'AGIT'
           }))
           .filter((p: any) => p.name && p.nim);
 
@@ -153,12 +157,21 @@ export default function AdminPage() {
     setEditingItem(item);
     if (item) {
       if (type === 'participant') {
-        setFormData({ name: item.name, nim: item.nim, is_winner: item.is_winner });
+        setFormData({
+          name: item.name,
+          nim: item.nim,
+          category: item.category || 'Staff',
+          employment_type: item.employment_type || 'AGIT',
+          is_winner: item.is_winner
+        });
       } else {
         setFormData({ prizeName: item.prize_name, quota: item.initial_quota });
       }
     } else {
-      setFormData(type === 'participant' ? { name: '', nim: '', is_winner: 0 } : { prizeName: '', quota: 1 });
+      setFormData(type === 'participant'
+        ? { name: '', nim: '', category: 'Staff', employment_type: 'AGIT', is_winner: 0 }
+        : { prizeName: '', quota: 1 }
+      );
     }
     setIsModalOpen(true);
   };
@@ -434,6 +447,8 @@ export default function AdminPage() {
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Name</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">NPK</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Category</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Employment</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Status</th>
                       <th className="px-6 py-3 text-right text-xs font-semibold text-showman-gold uppercase tracking-wider">Actions</th>
                     </tr>
@@ -459,6 +474,12 @@ export default function AdminPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-showman-gold-cream font-mono text-sm">
                           {participant.nim}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-showman-gold-cream text-sm">
+                          {participant.category}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-showman-gold-cream text-sm">
+                          {participant.employment_type}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {participant.is_winner ? (
@@ -705,6 +726,30 @@ export default function AdminPage() {
                         <option value={0}>Eligible</option>
                         <option value={1}>Winner</option>
                       </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-showman-gold-cream mb-1">Category</label>
+                        <select
+                          className="w-full px-4 py-2 border-2 border-showman-gold/30 bg-showman-black-lighter text-white rounded-lg focus:ring-2 focus:ring-showman-gold focus:border-showman-gold outline-none transition-all"
+                          value={formData.category || 'Staff'}
+                          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        >
+                          <option value="Staff">Staff</option>
+                          <option value="Dept Head Upper">Dept Head Upper</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-showman-gold-cream mb-1">Employment</label>
+                        <select
+                          className="w-full px-4 py-2 border-2 border-showman-gold/30 bg-showman-black-lighter text-white rounded-lg focus:ring-2 focus:ring-showman-gold focus:border-showman-gold outline-none transition-all"
+                          value={formData.employment_type || 'AGIT'}
+                          onChange={(e) => setFormData({ ...formData, employment_type: e.target.value })}
+                        >
+                          <option value="AGIT">AGIT</option>
+                          <option value="Vendor">Vendor</option>
+                        </select>
+                      </div>
                     </div>
                   </>
                 )}
