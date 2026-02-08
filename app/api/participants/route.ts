@@ -4,11 +4,11 @@ import { initDatabase, participantsDb } from '@/lib/db';
 export const dynamic = 'force-dynamic';
 
 // Initialize database on first request
-initDatabase();
+initDatabase().catch(console.error);
 
 export async function GET() {
   try {
-    const participants = participantsDb.getAll();
+    const participants = await participantsDb.getAll();
     return NextResponse.json({ success: true, data: participants });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     }
 
     const id = `participant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    participantsDb.create(id, name, nim, is_winner !== undefined ? is_winner : 0);
+    await participantsDb.create(id, name, nim, is_winner !== undefined ? is_winner : 0);
 
     return NextResponse.json({ success: true, message: 'Participant added successfully' });
   } catch (error: any) {
@@ -40,9 +40,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ success: false, error: 'ID, Name and NIM are required' }, { status: 400 });
     }
 
-    // Default to 0 if not provided, or keep current if we wanted to be more sophisticated.
-    // But since the UI will always send it now, we can just use what's sent.
-    participantsDb.update(id, name, nim, is_winner !== undefined ? is_winner : 0);
+    await participantsDb.update(id, name, nim, is_winner !== undefined ? is_winner : 0);
 
     return NextResponse.json({ success: true, message: 'Participant updated successfully' });
   } catch (error: any) {
@@ -61,11 +59,11 @@ export async function DELETE(request: Request) {
 
     if (id.includes(',')) {
       const ids = id.split(',');
-      participantsDb.deleteMany(ids);
+      await participantsDb.deleteMany(ids);
       return NextResponse.json({ success: true, message: `${ids.length} participants deleted successfully` });
     }
 
-    participantsDb.delete(id);
+    await participantsDb.delete(id);
 
     return NextResponse.json({ success: true, message: 'Participant deleted successfully' });
   } catch (error: any) {

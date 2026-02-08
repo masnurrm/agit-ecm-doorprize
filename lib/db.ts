@@ -1,172 +1,207 @@
-import Database from 'better-sqlite3';
-import path from 'path';
+import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
 
-const dbPath = path.join(process.cwd(), 'luckydraw.db');
-const db = new Database(dbPath);
+dotenv.config();
 
-// Enable foreign keys
-db.pragma('foreign_keys = ON');
+// Create a connection pool
+const pool = mysql.createPool({
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'user',
+  password: process.env.DB_PASSWORD || 'password',
+  database: process.env.DB_NAME || 'luckydraw',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+});
 
 // Initialize database schema
-export function initDatabase() {
-  // Create participants table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS participants (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      nim TEXT NOT NULL,
-      is_winner INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+export async function initDatabase() {
+  const connection = await pool.getConnection();
+  try {
+    // Create participants table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS participants (
+        id VARCHAR(255) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        nim VARCHAR(255) NOT NULL,
+        is_winner TINYINT(1) DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-  // Create prizes table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS prizes (
-      id TEXT PRIMARY KEY,
-      prize_name TEXT NOT NULL UNIQUE,
-      initial_quota INTEGER NOT NULL,
-      current_quota INTEGER NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+    // Create prizes table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS prizes (
+        id VARCHAR(255) PRIMARY KEY,
+        prize_name VARCHAR(255) NOT NULL UNIQUE,
+        initial_quota INT NOT NULL,
+        current_quota INT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-  // Create winners table (log history)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS winners (
-      id TEXT PRIMARY KEY,
-      participant_id TEXT NOT NULL,
-      prize_id TEXT NOT NULL,
-      won_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (participant_id) REFERENCES participants(id),
-      FOREIGN KEY (prize_id) REFERENCES prizes(id)
-    )
-  `);
+    // Create winners table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS winners (
+        id VARCHAR(255) PRIMARY KEY,
+        participant_id VARCHAR(255) NOT NULL,
+        prize_id VARCHAR(255) NOT NULL,
+        won_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX (participant_id),
+        INDEX (prize_id)
+      )
+    `);
 
-  console.log('Database initialized successfully!');
+    console.log('Database initialized successfully!');
+  } catch (error) {
+    console.error('Error initializing database:', error);
+    throw error;
+  } finally {
+    connection.release();
+  }
 }
 
 // Participant operations
 export const participantsDb = {
-  getAll: () => {
-    return db.prepare('SELECT * FROM participants ORDER BY name').all();
+  getAll: async () => {
+    const [rows] = await pool.query('SELECT * FROM participants ORDER BY name');
+    return rows as any[];
   },
 
-  getEligible: () => {
-    return db.prepare('SELECT * FROM participants WHERE is_winner = 0 ORDER BY name').all();
+  getEligible: async () => {
+    const [rows] = await pool.query('SELECT * FROM participants WHERE is_winner = 0 ORDER BY name');
+    return rows as any[];
   },
 
-  create: (id: string, name: string, nim: string, isWinner: number = 0) => {
-    return db.prepare('INSERT INTO participants (id, name, nim, is_winner) VALUES (?, ?, ?, ?)').run(id, name, nim, isWinner);
+  create: async (id: string, name: string, nim: string, isWinner: number = 0) => {
+    return pool.query('INSERT INTO participants (id, name, nim, is_winner) VALUES (?, ?, ?, ?)', [id, name, nim, isWinner]);
   },
 
-  update: (id: string, name: string, nim: string, isWinner: number) => {
-    return db.prepare('UPDATE participants SET name = ?, nim = ?, is_winner = ? WHERE id = ?').run(name, nim, isWinner, id);
+  update: async (id: string, name: string, nim: string, isWinner: number) => {
+    return pool.query('UPDATE participants SET name = ?, nim = ?, is_winner = ? WHERE id = ?', [name, nim, isWinner, id]);
   },
 
-  delete: (id: string) => {
-    return db.prepare('DELETE FROM participants WHERE id = ?').run(id);
+  delete: async (id: string) => {
+    return pool.query('DELETE FROM participants WHERE id = ?', [id]);
   },
 
-  markAsWinner: (id: string) => {
-    return db.prepare('UPDATE participants SET is_winner = 1 WHERE id = ?').run(id);
+  markAsWinner: async (id: string) => {
+    return pool.query('UPDATE participants SET is_winner = 1 WHERE id = ?', [id]);
   },
 
-  markAsNotWinner: (id: string) => {
-    return db.prepare('UPDATE participants SET is_winner = 0 WHERE id = ?').run(id);
+  markAsNotWinner: async (id: string) => {
+    return pool.query('UPDATE participants SET is_winner = 0 WHERE id = ?', [id]);
   },
 
-  resetAll: () => {
-    return db.prepare('UPDATE participants SET is_winner = 0').run();
+  resetAll: async () => {
+    return pool.query('UPDATE participants SET is_winner = 0');
   },
 
-  deleteAll: () => {
-    return db.prepare('DELETE FROM participants').run();
+  deleteAll: async () => {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      await connection.query('DELETE FROM winners');
+      await connection.query('DELETE FROM participants');
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   },
 
-  bulkCreate: (participants: { id: string, name: string, nim: string }[]) => {
-    const insert = db.prepare('INSERT INTO participants (id, name, nim) VALUES (?, ?, ?)');
-    const insertMany = db.transaction((list) => {
-      for (const p of list) insert.run(p.id, p.name, p.nim);
-    });
-    return insertMany(participants);
+  bulkCreate: async (participants: { id: string, name: string, nim: string }[]) => {
+    const values = participants.map(p => [p.id, p.name, p.nim]);
+    return pool.query('INSERT INTO participants (id, name, nim) VALUES ?', [values]);
   },
 
-  deleteMany: (ids: string[]) => {
-    const deleteBtn = db.prepare('DELETE FROM participants WHERE id = ?');
-    const deleteTransaction = db.transaction((idList) => {
-      for (const id of idList) deleteBtn.run(id);
-    });
-    return deleteTransaction(ids);
+  deleteMany: async (ids: string[]) => {
+    return pool.query('DELETE FROM participants WHERE id IN (?)', [ids]);
   },
 };
 
 // Prize operations
 export const prizesDb = {
-  getAll: () => {
-    return db.prepare('SELECT * FROM prizes ORDER BY prize_name').all();
+  getAll: async () => {
+    const [rows] = await pool.query('SELECT * FROM prizes ORDER BY prize_name');
+    return rows as any[];
   },
 
-  getAvailable: () => {
-    return db.prepare('SELECT * FROM prizes WHERE current_quota > 0 ORDER BY prize_name').all();
+  getAvailable: async () => {
+    const [rows] = await pool.query('SELECT * FROM prizes WHERE current_quota > 0 ORDER BY prize_name');
+    return rows as any[];
   },
 
-  getById: (id: string) => {
-    return db.prepare('SELECT * FROM prizes WHERE id = ?').get(id);
+  getById: async (id: string) => {
+    const [rows]: any = await pool.query('SELECT * FROM prizes WHERE id = ?', [id]);
+    return rows[0];
   },
 
-  create: (id: string, prizeName: string, quota: number) => {
-    return db.prepare('INSERT INTO prizes (id, prize_name, initial_quota, current_quota) VALUES (?, ?, ?, ?)').run(id, prizeName, quota, quota);
+  create: async (id: string, prizeName: string, quota: number) => {
+    return pool.query('INSERT INTO prizes (id, prize_name, initial_quota, current_quota) VALUES (?, ?, ?, ?)', [id, prizeName, quota, quota]);
   },
 
-  update: (id: string, prizeName: string, initialQuota: number) => {
-    // When updating initial_quota, we need to decide how to handle current_quota.
-    // Strategy: Calculate the difference and apply it to current_quota.
-    const current = db.prepare('SELECT initial_quota, current_quota FROM prizes WHERE id = ?').get(id) as any;
-    if (!current) throw new Error('Prize not found');
+  update: async (id: string, prizeName: string, initialQuota: number) => {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      const [rows]: any = await connection.query('SELECT initial_quota, current_quota FROM prizes WHERE id = ?', [id]);
+      const current = rows[0];
+      if (!current) throw new Error('Prize not found');
 
-    const diff = initialQuota - current.initial_quota;
-    const newCurrentQuota = current.current_quota + diff;
+      const diff = initialQuota - current.initial_quota;
+      const newCurrentQuota = current.current_quota + diff;
 
-    // Ensure current quota doesn't drop below 0 (unless we strictly want to allow it, but for physical items this implies logic error)
-    // However, if we simply update the definition, let's respect the math. 
-    // If user reduces quota below what's already given, current_quota could go negative. 
-    // Let's allow negative for now to indicate "oversubscribed" or just clamp to 0? 
-    // Better: Allow math to happen.
+      await connection.query('UPDATE prizes SET prize_name = ?, initial_quota = ?, current_quota = ? WHERE id = ?',
+        [prizeName, initialQuota, newCurrentQuota, id]);
 
-    return db.prepare('UPDATE prizes SET prize_name = ?, initial_quota = ?, current_quota = ? WHERE id = ?')
-      .run(prizeName, initialQuota, newCurrentQuota, id);
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   },
 
-  updateQuota: (id: string, newQuota: number) => {
-    return db.prepare('UPDATE prizes SET current_quota = ? WHERE id = ?').run(newQuota, id);
+  updateQuota: async (id: string, newQuota: number) => {
+    return pool.query('UPDATE prizes SET current_quota = ? WHERE id = ?', [newQuota, id]);
   },
 
-  delete: (id: string) => {
-    return db.prepare('DELETE FROM prizes WHERE id = ?').run(id);
+  delete: async (id: string) => {
+    return pool.query('DELETE FROM prizes WHERE id = ?', [id]);
   },
 
-  resetQuotas: () => {
-    return db.prepare('UPDATE prizes SET current_quota = initial_quota').run();
+  resetQuotas: async () => {
+    return pool.query('UPDATE prizes SET current_quota = initial_quota');
   },
 
-  deleteAll: () => {
-    return db.prepare('DELETE FROM prizes').run();
+  deleteAll: async () => {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      await connection.query('DELETE FROM winners');
+      await connection.query('DELETE FROM prizes');
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   },
 
-  deleteMany: (ids: string[]) => {
-    const deleteBtn = db.prepare('DELETE FROM prizes WHERE id = ?');
-    const deleteTransaction = db.transaction((idList) => {
-      for (const id of idList) deleteBtn.run(id);
-    });
-    return deleteTransaction(ids);
+  deleteMany: async (ids: string[]) => {
+    return pool.query('DELETE FROM prizes WHERE id IN (?)', [ids]);
   },
 };
 
 // Winner operations
 export const winnersDb = {
-  getAll: () => {
-    return db.prepare(`
+  getAll: async () => {
+    const [rows] = await pool.query(`
       SELECT 
         w.id,
         w.won_at,
@@ -179,39 +214,42 @@ export const winnersDb = {
       JOIN participants p ON w.participant_id = p.id
       JOIN prizes pr ON w.prize_id = pr.id
       ORDER BY w.won_at DESC
-    `).all();
+    `);
+    return rows as any[];
   },
 
-  getById: (id: string) => {
-    return db.prepare('SELECT * FROM winners WHERE id = ?').get(id);
+  getById: async (id: string) => {
+    const [rows]: any = await pool.query('SELECT * FROM winners WHERE id = ?', [id]);
+    return rows[0];
   },
 
-  create: (id: string, participantId: string, prizeId: string) => {
-    return db.prepare('INSERT INTO winners (id, participant_id, prize_id) VALUES (?, ?, ?)').run(id, participantId, prizeId);
+  create: async (id: string, participantId: string, prizeId: string) => {
+    return pool.query('INSERT INTO winners (id, participant_id, prize_id) VALUES (?, ?, ?)', [id, participantId, prizeId]);
   },
 
-  delete: (id: string) => {
-    return db.prepare('DELETE FROM winners WHERE id = ?').run(id);
+  delete: async (id: string) => {
+    return pool.query('DELETE FROM winners WHERE id = ?', [id]);
   },
 
-  deleteAll: () => {
-    return db.prepare('DELETE FROM winners').run();
+  deleteAll: async () => {
+    return pool.query('DELETE FROM winners');
   },
 
-  deleteMany: (ids: string[]) => {
-    const deleteBtn = db.prepare('DELETE FROM winners WHERE id = ?');
-    const deleteTransaction = db.transaction((idList) => {
-      for (const id of idList) deleteBtn.run(id);
-    });
-    return deleteTransaction(ids);
+  deleteMany: async (ids: string[]) => {
+    return pool.query('DELETE FROM winners WHERE id IN (?)', [ids]);
   },
 };
 
 // Transaction for confirming winners
-export function confirmWinners(participantIds: string[], prizeId: string) {
-  const transaction = db.transaction(() => {
+export async function confirmWinners(participantIds: string[], prizeId: string) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
     // Get current prize quota
-    const prize: any = prizesDb.getById(prizeId);
+    const [prizeRows]: any = await connection.query('SELECT * FROM prizes WHERE id = ? FOR UPDATE', [prizeId]);
+    const prize = prizeRows[0];
+
     if (!prize) {
       throw new Error('Prize not found');
     }
@@ -221,74 +259,79 @@ export function confirmWinners(participantIds: string[], prizeId: string) {
     }
 
     // Mark participants as winners and create winner records
-    participantIds.forEach((participantId) => {
+    for (const participantId of participantIds) {
       const winnerId = `winner_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      participantsDb.markAsWinner(participantId);
-      winnersDb.create(winnerId, participantId, prizeId);
-    });
+      await connection.query('UPDATE participants SET is_winner = 1 WHERE id = ?', [participantId]);
+      await connection.query('INSERT INTO winners (id, participant_id, prize_id) VALUES (?, ?, ?)', [winnerId, participantId, prizeId]);
+    }
 
     // Reduce prize quota
     const newQuota = prize.current_quota - participantIds.length;
-    prizesDb.updateQuota(prizeId, newQuota);
+    await connection.query('UPDATE prizes SET current_quota = ? WHERE id = ?', [newQuota, prizeId]);
 
+    await connection.commit();
     return { success: true, remainingQuota: newQuota };
-  });
-
-  return transaction();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }
 
-// Transaction for removing a winner (and restoring quota)
-export function removeWinner(winnerId: string) {
-  const transaction = db.transaction(() => {
-    // Get winner record to find participant and prize
-    const winner: any = winnersDb.getById(winnerId);
-    if (!winner) {
-      throw new Error('Winner record not found');
-    }
+// Transaction for removing a winner
+export async function removeWinner(winnerId: string) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
 
-    // Remove winner record
-    winnersDb.delete(winnerId);
+    const [winnerRows]: any = await connection.query('SELECT * FROM winners WHERE id = ?', [winnerId]);
+    const winner = winnerRows[0];
+    if (!winner) throw new Error('Winner record not found');
 
-    // Reset participant status
-    participantsDb.markAsNotWinner(winner.participant_id);
+    await connection.query('DELETE FROM winners WHERE id = ?', [winnerId]);
+    await connection.query('UPDATE participants SET is_winner = 0 WHERE id = ?', [winner.participant_id]);
 
-    // Increment prize quota
-    const prize: any = prizesDb.getById(winner.prize_id);
+    const [prizeRows]: any = await connection.query('SELECT current_quota FROM prizes WHERE id = ?', [winner.prize_id]);
+    const prize = prizeRows[0];
     if (prize) {
-      const newQuota = prize.current_quota + 1;
-      prizesDb.updateQuota(winner.prize_id, newQuota);
+      await connection.query('UPDATE prizes SET current_quota = current_quota + 1 WHERE id = ?', [winner.prize_id]);
     }
 
+    await connection.commit();
     return { success: true };
-  });
-
-  return transaction();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }
 
-export function removeWinnersBulk(winnerIds: string[]) {
-  const transaction = db.transaction(() => {
+export async function removeWinnersBulk(winnerIds: string[]) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
     for (const winnerId of winnerIds) {
-      // Get winner record to find participant and prize
-      const winner: any = winnersDb.getById(winnerId);
+      const [winnerRows]: any = await connection.query('SELECT * FROM winners WHERE id = ?', [winnerId]);
+      const winner = winnerRows[0];
       if (!winner) continue;
 
-      // Remove winner record
-      winnersDb.delete(winnerId);
-
-      // Reset participant status
-      participantsDb.markAsNotWinner(winner.participant_id);
-
-      // Increment prize quota
-      const prize: any = prizesDb.getById(winner.prize_id);
-      if (prize) {
-        const newQuota = prize.current_quota + 1;
-        prizesDb.updateQuota(winner.prize_id, newQuota);
-      }
+      await connection.query('DELETE FROM winners WHERE id = ?', [winnerId]);
+      await connection.query('UPDATE participants SET is_winner = 0 WHERE id = ?', [winner.participant_id]);
+      await connection.query('UPDATE prizes SET current_quota = current_quota + 1 WHERE id = ?', [winner.prize_id]);
     }
-    return { success: true };
-  });
 
-  return transaction();
+    await connection.commit();
+    return { success: true };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }
 
-export default db;
+export default pool;
+
