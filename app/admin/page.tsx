@@ -21,6 +21,7 @@ interface Prize {
   prize_name: string;
   initial_quota: number;
   current_quota: number;
+  image_url?: string;
 }
 
 interface Winner {
@@ -46,7 +47,10 @@ export default function AdminPage() {
   const [formData, setFormData] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const downloadTemplate = () => {
     const ws = XLSX.utils.json_to_sheet([
@@ -167,14 +171,22 @@ export default function AdminPage() {
           checked_in: item.checked_in || 0
         });
       } else {
-        setFormData({ prizeName: item.prize_name, quota: item.initial_quota });
+        setFormData({
+          prizeName: item.prize_name,
+          quota: item.initial_quota,
+          currentQuota: item.current_quota,
+          imageUrl: item.image_url
+        });
+        setPreviewUrl(item.image_url || null);
       }
     } else {
       setFormData(type === 'participant'
         ? { name: '', nim: '', category: 'Staff', employment_type: 'AGIT', is_winner: 0, checked_in: 0 }
-        : { prizeName: '', quota: 1 }
+        : { prizeName: '', quota: 1, currentQuota: 1 }
       );
+      setPreviewUrl(null);
     }
+    setImageFile(null);
     setIsModalOpen(true);
   };
 
@@ -254,14 +266,44 @@ export default function AdminPage() {
     }
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      let finalImageUrl = formData.imageUrl;
+
+      // Upload image if selected
+      if (imageFile) {
+        const uploadData = new FormData();
+        uploadData.append('file', imageFile);
+
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: uploadData,
+        });
+
+        const uploadResult = await uploadRes.json();
+        if (uploadResult.success) {
+          finalImageUrl = uploadResult.url;
+        } else {
+          alert('Failed to upload image: ' + uploadResult.error);
+          setLoading(false);
+          return;
+        }
+      }
+
       const endpoint = modalType === 'participant' ? '/api/participants' : '/api/prizes';
       const method = editingItem ? 'PUT' : 'POST';
-      const body = editingItem ? { ...formData, id: editingItem.id } : formData;
+      const body = editingItem ? { ...formData, imageUrl: finalImageUrl, id: editingItem.id } : { ...formData, imageUrl: finalImageUrl };
 
       const res = await fetch(endpoint, {
         method,
@@ -541,6 +583,7 @@ export default function AdminPage() {
                           onChange={toggleSelectAll}
                         />
                       </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Image</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Prize Name</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Initial</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Current</th>
@@ -563,6 +606,15 @@ export default function AdminPage() {
                             checked={selectedIds.includes(prize.id)}
                             onChange={() => toggleSelect(prize.id)}
                           />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {prize.image_url ? (
+                            <img src={prize.image_url} alt={prize.prize_name} className="w-10 h-10 object-cover rounded-md border border-showman-gold/30" />
+                          ) : (
+                            <div className="w-10 h-10 bg-showman-black-lighter rounded-md border border-showman-gold/30 flex items-center justify-center">
+                              <Gift className="w-5 h-5 text-showman-gold/50" />
+                            </div>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap font-medium text-white">
                           {prize.prize_name}
@@ -793,6 +845,34 @@ export default function AdminPage() {
                       />
                     </div>
                     <div>
+                      <label className="block text-sm font-medium text-showman-gold-cream mb-1">Prize Image</label>
+                      <div className="flex items-center space-x-4">
+                        <div
+                          onClick={() => imageInputRef.current?.click()}
+                          className="w-24 h-24 border-2 border-dashed border-showman-gold/50 rounded-lg flex items-center justify-center cursor-pointer hover:bg-showman-gold/10 transition-colors overflow-hidden"
+                        >
+                          {previewUrl ? (
+                            <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="text-center">
+                              <Plus className="w-6 h-6 text-showman-gold mx-auto" />
+                              <span className="text-xs text-showman-gold-cream">Upload</span>
+                            </div>
+                          )}
+                        </div>
+                        <input
+                          type="file"
+                          ref={imageInputRef}
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                        />
+                        <div className="text-xs text-showman-gold-cream">
+                          Click to select an image for the prize card.
+                        </div>
+                      </div>
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium text-showman-gold-cream mb-1">Initial Quota</label>
                       <input
                         type="number"
@@ -807,6 +887,18 @@ export default function AdminPage() {
                           Note: Changing initial quota will adjust current quota by the difference.
                         </p>
                       )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-showman-gold-cream mb-1">Remaining Stock (Current Quota)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        required
+                        className="w-full px-4 py-2 border-2 border-showman-gold/30 bg-showman-black-lighter text-white rounded-lg focus:ring-2 focus:ring-showman-gold focus:border-showman-gold outline-none transition-all"
+                        value={formData.currentQuota !== undefined ? formData.currentQuota : formData.quota}
+                        onChange={(e) => setFormData({ ...formData, currentQuota: parseInt(e.target.value) })}
+                      />
+                      <p className="text-xs text-showman-gold-cream mt-1">Default is same as Initial Quota. Edit to manually adjust stock.</p>
                     </div>
                   </>
                 )}

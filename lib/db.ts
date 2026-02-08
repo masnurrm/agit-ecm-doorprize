@@ -50,9 +50,24 @@ export async function initDatabase() {
         prize_name VARCHAR(255) NOT NULL UNIQUE,
         initial_quota INT NOT NULL,
         current_quota INT NOT NULL,
+        image_url VARCHAR(255),
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Add columns if they don't exist (primitive migration)
+    try {
+      await connection.query('ALTER TABLE participants ADD COLUMN category VARCHAR(100) DEFAULT "Staff"');
+    } catch (e) { }
+    try {
+      await connection.query('ALTER TABLE participants ADD COLUMN employment_type VARCHAR(100) DEFAULT "AGIT"');
+    } catch (e) { }
+    try {
+      await connection.query('ALTER TABLE participants ADD COLUMN checked_in TINYINT(1) DEFAULT 0');
+    } catch (e) { }
+    try {
+      await connection.query('ALTER TABLE prizes ADD COLUMN image_url VARCHAR(255)');
+    } catch (e) { }
 
     // Create winners table
     await connection.query(`
@@ -162,23 +177,31 @@ export const prizesDb = {
     return rows[0];
   },
 
-  create: async (id: string, prizeName: string, quota: number) => {
-    return pool.query('INSERT INTO prizes (id, prize_name, initial_quota, current_quota) VALUES (?, ?, ?, ?)', [id, prizeName, quota, quota]);
+  create: async (id: string, prizeName: string, quota: number, imageUrl?: string) => {
+    return pool.query('INSERT INTO prizes (id, prize_name, initial_quota, current_quota, image_url) VALUES (?, ?, ?, ?, ?)', [id, prizeName, quota, quota, imageUrl || null]);
   },
 
-  update: async (id: string, prizeName: string, initialQuota: number) => {
+  update: async (id: string, prizeName: string, initialQuota: number, currentQuota?: number, imageUrl?: string) => {
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
-      const [rows]: any = await connection.query('SELECT initial_quota, current_quota FROM prizes WHERE id = ?', [id]);
-      const current = rows[0];
-      if (!current) throw new Error('Prize not found');
 
-      const diff = initialQuota - current.initial_quota;
-      const newCurrentQuota = current.current_quota + diff;
+      // If currentQuota is provided, we update it directly (Admin override)
+      // If NOT provided, we calculate based on diff (Legacy behavior / strict initial quota change)
 
-      await connection.query('UPDATE prizes SET prize_name = ?, initial_quota = ?, current_quota = ? WHERE id = ?',
-        [prizeName, initialQuota, newCurrentQuota, id]);
+      let newCurrentQuota = currentQuota;
+
+      if (currentQuota === undefined) {
+        const [rows]: any = await connection.query('SELECT initial_quota, current_quota FROM prizes WHERE id = ?', [id]);
+        const current = rows[0];
+        if (!current) throw new Error('Prize not found');
+
+        const diff = initialQuota - current.initial_quota;
+        newCurrentQuota = current.current_quota + diff;
+      }
+
+      await connection.query('UPDATE prizes SET prize_name = ?, initial_quota = ?, current_quota = ?, image_url = ? WHERE id = ?',
+        [prizeName, initialQuota, newCurrentQuota, imageUrl || null, id]);
 
       await connection.commit();
     } catch (error) {
