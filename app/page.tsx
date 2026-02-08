@@ -14,6 +14,7 @@ interface Participant {
   category: string;
   employment_type: string;
   is_winner: number;
+  checked_in: number;
 }
 
 interface Prize {
@@ -612,7 +613,7 @@ export default function Home() {
                         className="w-full max-w-5xl overflow-hidden"
                       >
                         <SlotMachine
-                          participants={allParticipants}
+                          participants={eligibleParticipants}
                           isRolling={isRolling}
                           isPaused={isPaused}
                           onComplete={handleSlotMachineComplete}

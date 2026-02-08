@@ -15,7 +15,8 @@ export async function POST(request: Request) {
       name: p.name,
       nim: p.nim,
       category: p.category || 'Staff',
-      employment_type: p.employment_type || 'AGIT'
+      employment_type: p.employment_type || 'AGIT',
+      checked_in: p.checked_in !== undefined ? p.checked_in : 0
     }));
 
     await participantsDb.bulkCreate(participantsWithIds);

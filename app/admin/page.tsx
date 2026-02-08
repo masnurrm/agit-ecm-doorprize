@@ -13,6 +13,7 @@ interface Participant {
   category: string;
   employment_type: string;
   is_winner: number;
+  checked_in: number;
 }
 
 interface Prize {
@@ -162,14 +163,15 @@ export default function AdminPage() {
           nim: item.nim,
           category: item.category || 'Staff',
           employment_type: item.employment_type || 'AGIT',
-          is_winner: item.is_winner
+          is_winner: item.is_winner,
+          checked_in: item.checked_in || 0
         });
       } else {
         setFormData({ prizeName: item.prize_name, quota: item.initial_quota });
       }
     } else {
       setFormData(type === 'participant'
-        ? { name: '', nim: '', category: 'Staff', employment_type: 'AGIT', is_winner: 0 }
+        ? { name: '', nim: '', category: 'Staff', employment_type: 'AGIT', is_winner: 0, checked_in: 0 }
         : { prizeName: '', quota: 1 }
       );
     }
@@ -449,6 +451,7 @@ export default function AdminPage() {
                       <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">NPK</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Category</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Employment</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Check-in</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-showman-gold uppercase tracking-wider">Status</th>
                       <th className="px-6 py-3 text-right text-xs font-semibold text-showman-gold uppercase tracking-wider">Actions</th>
                     </tr>
@@ -480,6 +483,17 @@ export default function AdminPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-showman-gold-cream text-sm">
                           {participant.employment_type}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {participant.checked_in ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-500/20 text-green-400 border border-green-500/30">
+                              Checked In
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-500/20 text-gray-400 border border-gray-500/30">
+                              Pending
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {participant.is_winner ? (
@@ -725,6 +739,17 @@ export default function AdminPage() {
                       >
                         <option value={0}>Eligible</option>
                         <option value={1}>Winner</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-showman-gold-cream mb-1">Check-in Status</label>
+                      <select
+                        className="w-full px-4 py-2 border-2 border-showman-gold/30 bg-showman-black-lighter text-white rounded-lg focus:ring-2 focus:ring-showman-gold focus:border-showman-gold outline-none transition-all"
+                        value={formData.checked_in || 0}
+                        onChange={(e) => setFormData({ ...formData, checked_in: parseInt(e.target.value) })}
+                      >
+                        <option value={0}>Pending</option>
+                        <option value={1}>Checked In</option>
                       </select>
                     </div>
                     <div className="grid grid-cols-2 gap-4">

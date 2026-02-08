@@ -31,6 +31,11 @@ export default function CheckIn() {
   const [newCategory, setNewCategory] = useState('Staff');
   const [newType, setNewType] = useState('AGIT');
 
+  const showMessage = (type: 'success' | 'error', text: string) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage(null), 5000);
+  };
+
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!nim.trim()) return;
@@ -47,7 +52,7 @@ export default function CheckIn() {
       if (data.success) {
         setParticipant(data.data);
         setSearched(true);
-        showMessage('success', 'Participant found!');
+        showMessage('success', 'Participant record found!');
       } else {
         setSearched(true);
         setShowAddForm(true);
@@ -56,6 +61,29 @@ export default function CheckIn() {
       }
     } catch (error) {
       showMessage('error', 'Failed to search participant');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCheckIn = async () => {
+    if (!participant) return;
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/participants/check-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: participant.id })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setParticipant({ ...participant, checked_in: 1 });
+        showMessage('success', `${participant.name} checked in successfully!`);
+      } else {
+        showMessage('error', data.error || 'Failed to check in');
+      }
+    } catch (error) {
+      showMessage('error', 'Failed to check in');
     } finally {
       setIsLoading(false);
     }
@@ -73,15 +101,16 @@ export default function CheckIn() {
           name: newName,
           nim: nim,
           category: newCategory,
-          employment_type: newType
+          employment_type: newType,
+          checked_in: 1
         }),
       });
 
       const data = await response.json();
 
       if (data.success) {
-        showMessage('success', 'Registration successful!');
-        // After adding, search again to show the info
+        showMessage('success', 'Registration & Check-in successful!');
+        // Refresh by searching for the same NIM again to show full info
         await handleSearch();
       } else {
         showMessage('error', data.error || 'Failed to register');
@@ -91,11 +120,6 @@ export default function CheckIn() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const showMessage = (type: 'success' | 'error', text: string) => {
-    setMessage({ type, text });
-    setTimeout(() => setMessage(null), 5000);
   };
 
   const resetPage = () => {
@@ -137,7 +161,7 @@ export default function CheckIn() {
             </p>
           </div>
 
-          <div className="w-10"></div> {/* Spacer for symmetry */}
+          <div className="w-10"></div>
         </div>
       </header>
 
@@ -219,11 +243,15 @@ export default function CheckIn() {
                 className="space-y-8"
               >
                 <div className="text-center space-y-2">
-                  <div className="bg-showman-gold w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(245,158,11,0.4)]">
-                    <UserCheck className="w-10 h-10 text-showman-black" />
+                  <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl transition-colors duration-500 ${participant.checked_in ? 'bg-green-500 shadow-green-500/30' : 'bg-showman-gold shadow-showman-gold/30'}`}>
+                    {participant.checked_in ? <CheckCircle className="w-10 h-10 text-white" /> : <UserCheck className="w-10 h-10 text-showman-black" />}
                   </div>
-                  <h2 className="text-3xl font-black text-white uppercase tracking-tight">Welcome to the Event!</h2>
-                  <p className="text-showman-gold font-bold">Registration Confirmed</p>
+                  <h2 className="text-3xl font-black text-white uppercase tracking-tight">
+                    {participant.checked_in ? 'Check-in Complete!' : 'Participant Found'}
+                  </h2>
+                  <p className={`${participant.checked_in ? 'text-green-400' : 'text-showman-gold'} font-bold`}>
+                    {participant.checked_in ? 'Ready for Lucky Draw' : 'Please confirm attendance'}
+                  </p>
                 </div>
 
                 <div className="bg-black/40 rounded-2xl p-6 border border-showman-gold/20 space-y-4">
@@ -268,13 +296,34 @@ export default function CheckIn() {
                   </div>
                 </div>
 
-                <button
-                  onClick={resetPage}
-                  className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-4 rounded-2xl border-2 border-white/10 transition-all flex items-center justify-center space-x-3 uppercase tracking-widest text-sm"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  <span>Next Check-in</span>
-                </button>
+                <div className="flex flex-col space-y-3">
+                  {!participant.checked_in ? (
+                    <button
+                      onClick={handleCheckIn}
+                      disabled={isLoading}
+                      className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-black py-5 rounded-2xl shadow-xl border-2 border-white/10 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center space-x-3 uppercase tracking-widest text-lg"
+                    >
+                      {isLoading ? <RefreshCw className="w-6 h-6 animate-spin" /> : (
+                        <>
+                          <CheckCircle className="w-6 h-6" />
+                          <span>CONFIRM CHECK IN</span>
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <div className="bg-green-500/10 border-2 border-green-500/30 rounded-2xl p-4 text-center mb-2">
+                      <p className="text-green-400 font-bold uppercase tracking-widest text-sm">Attendance Recorded</p>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={resetPage}
+                    className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-4 rounded-2xl border-2 border-white/10 transition-all flex items-center justify-center space-x-3 uppercase tracking-widest text-sm"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Next Check-in</span>
+                  </button>
+                </div>
               </motion.div>
             )}
 

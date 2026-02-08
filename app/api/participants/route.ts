@@ -17,7 +17,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { name, nim, category, employment_type, is_winner } = await request.json();
+    const { name, nim, category, employment_type, is_winner, checked_in } = await request.json();
 
     if (!name || !nim) {
       return NextResponse.json({ success: false, error: 'Name and NIM are required' }, { status: 400 });
@@ -30,7 +30,8 @@ export async function POST(request: Request) {
       nim,
       category || 'Staff',
       employment_type || 'AGIT',
-      is_winner !== undefined ? is_winner : 0
+      is_winner !== undefined ? is_winner : 0,
+      checked_in !== undefined ? checked_in : 0
     );
 
     return NextResponse.json({ success: true, message: 'Participant added successfully' });
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    const { id, name, nim, category, employment_type, is_winner } = await request.json();
+    const { id, name, nim, category, employment_type, is_winner, checked_in } = await request.json();
 
     if (!id || !name || !nim) {
       return NextResponse.json({ success: false, error: 'ID, Name and NIM are required' }, { status: 400 });
@@ -53,7 +54,8 @@ export async function PUT(request: Request) {
       nim,
       category || 'Staff',
       employment_type || 'AGIT',
-      is_winner !== undefined ? is_winner : 0
+      is_winner !== undefined ? is_winner : 0,
+      checked_in !== undefined ? checked_in : 0
     );
 
     return NextResponse.json({ success: true, message: 'Participant updated successfully' });
