@@ -10,6 +10,7 @@ interface Participant {
   category: string;
   employment_type: string;
   is_winner: number;
+  checked_in: number;
 }
 
 interface SlotMachineProps {
