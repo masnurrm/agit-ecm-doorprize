@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SlotMachine from '@/components/SlotMachine';
 import WinnerCard from '@/components/WinnerCard';
@@ -22,6 +22,7 @@ interface Prize {
   prize_name: string;
   initial_quota: number;
   current_quota: number;
+  image_url?: string;
 }
 
 export default function Home() {
@@ -39,12 +40,55 @@ export default function Home() {
   const [stats, setStats] = useState({ totalParticipants: 0, eligibleParticipants: 0, totalPrizes: 0 });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  // Sound Effects Refs
+  const drumRollRef = useRef<HTMLAudioElement | null>(null);
+  const yayRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
+    // Initialize audio
+    drumRollRef.current = new Audio('/sfx/drum roll.mp3');
+    drumRollRef.current.loop = true;
+
+    // Add timestamp to force reload of new file
+    yayRef.current = new Audio(`/sfx/yay.mp3?v=${new Date().getTime()}`);
+
     loadPrizes();
     loadEligibleParticipants();
     loadStats();
+
+    return () => {
+      // Cleanup
+      if (drumRollRef.current) {
+        drumRollRef.current.pause();
+        drumRollRef.current = null;
+      }
+      if (yayRef.current) {
+        yayRef.current.pause();
+        yayRef.current = null;
+      }
+    };
   }, []);
+
+  // Handle Drum Roll Sound
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    if (isRolling && !isPaused) {
+      // Add 1 second buffer before playing
+      timeoutId = setTimeout(() => {
+        drumRollRef.current?.play().catch(e => console.log("Audio play failed", e));
+      }, 1000);
+    } else {
+      if (drumRollRef.current) {
+        drumRollRef.current.pause();
+        drumRollRef.current.currentTime = 0;
+      }
+    }
+
+    return () => clearTimeout(timeoutId);
+  }, [isRolling, isPaused]);
 
   const loadStats = async () => {
     try {
@@ -166,19 +210,26 @@ export default function Home() {
 
   useEffect(() => {
     const rollQuantity = typeof quantity === 'string' ? parseInt(quantity) : quantity;
-    if (!isRolling && isSequenceActive && tentativeWinners.length < (rollQuantity || 0)) {
+    // Wait for rolling to stop AND confetti to finish
+    if (!isRolling && !showConfetti && isSequenceActive && tentativeWinners.length < (rollQuantity || 0)) {
       const timer = setTimeout(() => {
         setIsRolling(true);
-      }, 2000); // 2 second delay between winners
+      }, 1000); // reduced delay since confetti adds time
       return () => clearTimeout(timer);
-    } else if (!isRolling && isSequenceActive && tentativeWinners.length === rollQuantity) {
+    } else if (!isRolling && !showConfetti && isSequenceActive && tentativeWinners.length === rollQuantity) {
       setIsSequenceActive(false);
       showMessage('success', 'Draw complete! All winners revealed.');
     }
-  }, [isRolling, isSequenceActive, tentativeWinners.length, quantity]);
+  }, [isRolling, showConfetti, isSequenceActive, tentativeWinners.length, quantity]);
 
   // Stabilize the complete callback to prevent unnecessary re-effects in SlotMachine
   const handleSlotMachineComplete = (landedParticipant: Participant) => {
+    // Stop drum roll immediately
+    if (drumRollRef.current) {
+      drumRollRef.current.pause();
+      drumRollRef.current.currentTime = 0;
+    }
+
     // GAMBLING LOGIC: Check if the person is eligible
     const isAlreadyTentative = tentativeWinners.some(w => w.id === landedParticipant.id);
     const isEligible = eligibleParticipants.some(p => p.id === landedParticipant.id);
@@ -187,6 +238,26 @@ export default function Home() {
       // VALID WINNER
       setTentativeWinners(prev => [landedParticipant, ...prev]);
       setIsRolling(false);
+
+      // Play Yay Sound
+      if (yayRef.current) {
+        yayRef.current.currentTime = 0;
+        yayRef.current.play().catch(e => console.log("Audio play failed", e));
+
+        // Stop after 2 seconds
+        setTimeout(() => {
+          if (yayRef.current) {
+            yayRef.current.pause();
+            yayRef.current.currentTime = 0;
+          }
+        }, 2000);
+      }
+
+      // Trigger Confetti
+      setShowConfetti(true);
+      setTimeout(() => {
+        setShowConfetti(false);
+      }, 2000); // 2 seconds duration for GIF
     } else {
       // NOT ELIGIBLE - Stop rolling state first so it can be re-triggered
       setIsRolling(false);
@@ -266,6 +337,54 @@ export default function Home() {
         />
         <div className="absolute inset-0 bg-black/20" /> {/* Subtle overlay for contrast */}
       </div>
+
+      {/* Trumpet Overlay - Visible during rolling */}
+      <AnimatePresence>
+        {isRolling && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[65] pointer-events-none"
+          >
+            {/* Top Left - Rotated 180 */}
+            <div className="absolute top-0 left-0 w-16 h-16 md:w-24 md:h-24">
+              <img src="/gif/thrumpet.gif" alt="Trumpet" className="w-full h-full object-contain transform rotate-180 -scale-x-100" />
+            </div>
+            {/* Top Right - Rotated 180 */}
+            <div className="absolute top-0 right-0 w-16 h-16 md:w-24 md:h-24">
+              <img src="/gif/thrumpet.gif" alt="Trumpet" className="w-full h-full object-contain rotate-180" />
+            </div>
+            {/* Bottom Left - Rotated 180 */}
+            <div className="absolute bottom-0 left-0 w-16 h-16 md:w-24 md:h-24">
+              <img src="/gif/thrumpet.gif" alt="Trumpet" className="w-full h-full object-contain transform rotate-180 -scale-x-100 -scale-y-100" />
+            </div>
+            {/* Bottom Right - Rotated 180 */}
+            <div className="absolute bottom-0 right-0 w-16 h-16 md:w-24 md:h-24">
+              <img src="/gif/thrumpet.gif" alt="Trumpet" className="w-full h-full object-contain transform rotate-180 -scale-y-100" />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Confetti Overlay */}
+      <AnimatePresence>
+        {showConfetti && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 z-[70] pointer-events-none flex items-center justify-center"
+          >
+            <img
+              src="/gif/confetti gif.gif"
+              alt="Confetti"
+              className="w-full h-full object-cover"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Sidebar Overlay */}
       <AnimatePresence>
@@ -456,7 +575,13 @@ export default function Home() {
                     {/* Prize Image Container */}
                     <div className={`relative w-full aspect-square mb-4 flex items-center justify-center transition-all duration-700 ${selectedPrizeId === prize.id ? 'scale-110 rotate-1' : 'group-hover:scale-105'
                       } ${selectedPrizeId === prize.id ? 'max-h-[200px]' : 'max-h-[160px]'}`}>
-                      {getPrizeImage(prize.prize_name) ? (
+                      {prize.image_url ? (
+                        <motion.img
+                          src={prize.image_url}
+                          alt={prize.prize_name}
+                          className="w-full h-full object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
+                        />
+                      ) : getPrizeImage(prize.prize_name) ? (
                         <motion.img
                           src={getPrizeImage(prize.prize_name)!}
                           alt={prize.prize_name}

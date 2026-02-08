@@ -14,14 +14,14 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { prizeName, quota } = await request.json();
+    const { prizeName, quota, imageUrl } = await request.json();
 
     if (!prizeName || !quota || quota < 1) {
       return NextResponse.json({ success: false, error: 'Prize name and valid quota are required' }, { status: 400 });
     }
 
     const id = `prize_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    await prizesDb.create(id, prizeName, quota);
+    await prizesDb.create(id, prizeName, quota, imageUrl);
 
     return NextResponse.json({ success: true, message: 'Prize added successfully' });
   } catch (error: any) {
@@ -31,13 +31,15 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    const { id, prizeName, quota } = await request.json();
+    const { id, prizeName, quota, currentQuota, imageUrl } = await request.json();
 
     if (!id || !prizeName || quota === undefined) {
       return NextResponse.json({ success: false, error: 'ID, Prize Name and Quota are required' }, { status: 400 });
     }
 
-    await prizesDb.update(id, prizeName, quota);
+    // Pass currentQuota if it exists (for direct stock editing)
+    // Pass imageUrl if it exists
+    await prizesDb.update(id, prizeName, quota, currentQuota, imageUrl);
 
     return NextResponse.json({ success: true, message: 'Prize updated successfully' });
   } catch (error: any) {

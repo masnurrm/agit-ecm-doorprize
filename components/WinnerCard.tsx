@@ -47,17 +47,9 @@ export default function WinnerCard({ participant, index, onRemove, disabled = fa
               {participant.name}
             </h3>
             <div className="h-0.5 w-10 bg-showman-gold/30 mx-auto"></div>
-            <p className="text-xs text-showman-gold font-mono font-bold tracking-widest leading-none">
+            <p className="text-lg text-showman-gold font-mono font-bold tracking-widest leading-none">
               NPK: {participant.nim}
             </p>
-            <div className="flex items-center justify-center gap-2 mt-2">
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-showman-gold/10 text-showman-gold border border-showman-gold/30">
-                {participant.category || 'Staff'}
-              </span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-showman-gold-cream border border-white/10">
-                {participant.employment_type || 'AGIT'}
-              </span>
-            </div>
           </div>
         </div>
       </div>
