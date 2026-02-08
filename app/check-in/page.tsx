@@ -423,6 +423,25 @@ export default function CheckIn() {
           AGIT ECM 2026 • Registration Management System
         </p>
       </footer>
+
+      {/* Floating Action Button - Shortpath to Add Participant */}
+      <Link
+        href="/check-in/add"
+        className="fixed bottom-8 right-8 z-50 group"
+      >
+        <motion.div
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          className="bg-showman-red text-showman-gold p-5 rounded-full shadow-[0_0_30px_rgba(220,38,38,0.5)] border-2 border-showman-gold/50 flex items-center justify-center hover:bg-showman-red-dark transition-colors"
+        >
+          <UserPlus className="w-8 h-8" />
+
+          {/* Tooltip */}
+          <span className="absolute right-full mr-4 bg-showman-black/90 text-showman-gold border border-showman-gold/30 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest">
+            Add New Participant
+          </span>
+        </motion.div>
+      </Link>
     </div>
   );
 }
