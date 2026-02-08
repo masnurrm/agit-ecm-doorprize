@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const prizes = prizesDb.getAll();
+    const prizes = await prizesDb.getAll();
     return NextResponse.json({ success: true, data: prizes });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     }
 
     const id = `prize_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    prizesDb.create(id, prizeName, quota);
+    await prizesDb.create(id, prizeName, quota);
 
     return NextResponse.json({ success: true, message: 'Prize added successfully' });
   } catch (error: any) {
@@ -37,7 +37,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ success: false, error: 'ID, Prize Name and Quota are required' }, { status: 400 });
     }
 
-    prizesDb.update(id, prizeName, quota);
+    await prizesDb.update(id, prizeName, quota);
 
     return NextResponse.json({ success: true, message: 'Prize updated successfully' });
   } catch (error: any) {
@@ -56,11 +56,11 @@ export async function DELETE(request: Request) {
 
     if (id.includes(',')) {
       const ids = id.split(',');
-      prizesDb.deleteMany(ids);
+      await prizesDb.deleteMany(ids);
       return NextResponse.json({ success: true, message: `${ids.length} prizes deleted successfully` });
     }
 
-    prizesDb.delete(id);
+    await prizesDb.delete(id);
 
     return NextResponse.json({ success: true, message: 'Prize deleted successfully' });
   } catch (error: any) {
