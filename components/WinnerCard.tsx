@@ -7,6 +7,8 @@ interface Participant {
   id: string;
   name: string;
   nim: string;
+  category?: string;
+  employment_type?: string;
 }
 
 interface WinnerCardProps {
@@ -40,7 +42,7 @@ export default function WinnerCard({ participant, index, onRemove, disabled = fa
             <X className="w-4 h-4" />
           </button>
 
-          <div className="text-center space-y-2 pr-8">
+          <div className="text-center space-y-2">
             <h3 className="text-xl font-black text-white leading-tight break-words">
               {participant.name}
             </h3>
@@ -48,6 +50,14 @@ export default function WinnerCard({ participant, index, onRemove, disabled = fa
             <p className="text-xs text-showman-gold font-mono font-bold tracking-widest leading-none">
               NPK: {participant.nim}
             </p>
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-showman-gold/10 text-showman-gold border border-showman-gold/30">
+                {participant.category || 'Staff'}
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-showman-gold-cream border border-white/10">
+                {participant.employment_type || 'AGIT'}
+              </span>
+            </div>
           </div>
         </div>
       </div>
