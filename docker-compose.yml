@@ -20,7 +20,7 @@ services:
     container_name: agit-app
     restart: always
     ports:
-      - "3000:3000"
+      - "80:80"
     environment:
       - DATABASE_URL=mysql://user:password@db:3306/luckydraw
       - DB_HOST=db

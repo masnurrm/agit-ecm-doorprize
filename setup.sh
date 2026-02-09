@@ -54,7 +54,7 @@ if [ $? -eq 0 ]; then
     echo "🎉 You're all set! Now run:"
     echo "   npm run dev"
     echo ""
-    echo "Then open http://localhost:3000 in your browser"
+    echo "Then open http://localhost in your browser"
 else
     echo ""
     echo "❌ Migration failed. Check errors above."

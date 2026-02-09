@@ -452,7 +452,7 @@ const participants = [
 ```bash
 npm run build
 npm start
-# Access on http://localhost:3000
+# Access on http://localhost
 ```
 
 ### Option 2: Network Access
@@ -461,7 +461,7 @@ npm start
 "dev": "next dev -H 0.0.0.0"
 
 # Access from any device on same network
-http://YOUR_IP:3000
+http://YOUR_IP
 ```
 
 ### Option 3: Cloud Deployment
