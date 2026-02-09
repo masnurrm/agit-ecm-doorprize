@@ -20,7 +20,7 @@ export default function AddParticipantPage() {
 
   // Form State
   const [name, setName] = useState('');
-  const [nim, setNim] = useState('');
+  const [npk, setNpk] = useState('');
   const [category, setCategory] = useState('Staff');
   const [employmentType, setEmploymentType] = useState('AGIT');
 
@@ -39,7 +39,7 @@ export default function AddParticipantPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
-          nim,
+          npk,
           category,
           employment_type: employmentType,
           checked_in: 1 // Automatically check-in upon manual registration
@@ -52,7 +52,7 @@ export default function AddParticipantPage() {
         showMessage('success', 'Registration & Check-in successful!');
         // Clear form
         setName('');
-        setNim('');
+        setNpk('');
         // Redirect back to check-in after a short delay
         setTimeout(() => {
           router.push('/check-in');
@@ -157,13 +157,13 @@ export default function AddParticipantPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] uppercase tracking-widest text-showman-gold-cream/60 mb-2 ml-1">NIM / NPK</label>
+                  <label className="block text-[10px] uppercase tracking-widest text-showman-gold-cream/60 mb-2 ml-1">NPK</label>
                   <input
                     type="text"
                     required
-                    value={nim}
-                    onChange={(e) => setNim(e.target.value)}
-                    placeholder="Nomor Induk Mahasiswa / Karyawan"
+                    value={npk}
+                    onChange={(e) => setNpk(e.target.value)}
+                    placeholder="Nomor Pokok Karyawan"
                     className="w-full bg-showman-black border-2 border-showman-gold/20 rounded-xl py-4 px-5 text-white font-bold text-lg focus:border-showman-gold focus:ring-4 focus:ring-showman-gold/10 outline-none transition-all placeholder:text-white/10"
                   />
                 </div>

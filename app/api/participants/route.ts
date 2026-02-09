@@ -17,17 +17,19 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { name, nim, category, employment_type, is_winner, checked_in } = await request.json();
+    const body = await request.json();
+    const { name, category, employment_type, is_winner, checked_in } = body;
+    const npk = body.npk || body.nim;
 
-    if (!name || !nim) {
-      return NextResponse.json({ success: false, error: 'Name and NIM are required' }, { status: 400 });
+    if (!name || !npk) {
+      return NextResponse.json({ success: false, error: 'Name and NPK are required' }, { status: 400 });
     }
 
     const id = `participant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     await participantsDb.create(
       id,
       name,
-      nim,
+      npk,
       category || 'Staff',
       employment_type || 'AGIT',
       is_winner !== undefined ? is_winner : 0,
@@ -42,16 +44,18 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    const { id, name, nim, category, employment_type, is_winner, checked_in } = await request.json();
+    const body = await request.json();
+    const { id, name, category, employment_type, is_winner, checked_in } = body;
+    const npk = body.npk || body.nim;
 
-    if (!id || !name || !nim) {
-      return NextResponse.json({ success: false, error: 'ID, Name and NIM are required' }, { status: 400 });
+    if (!id || !name || !npk) {
+      return NextResponse.json({ success: false, error: 'ID, Name and NPK are required' }, { status: 400 });
     }
 
     await participantsDb.update(
       id,
       name,
-      nim,
+      npk,
       category || 'Staff',
       employment_type || 'AGIT',
       is_winner !== undefined ? is_winner : 0,

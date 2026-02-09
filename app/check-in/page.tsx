@@ -19,7 +19,7 @@ import {
 import Link from 'next/link';
 
 export default function CheckIn() {
-  const [nim, setNim] = useState('');
+  const [npk, setNpk] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [participant, setParticipant] = useState<any>(null);
   const [searched, setSearched] = useState(false);
@@ -38,7 +38,7 @@ export default function CheckIn() {
 
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!nim.trim()) return;
+    if (!npk.trim()) return;
 
     setIsLoading(true);
     setParticipant(null);
@@ -46,7 +46,7 @@ export default function CheckIn() {
     setSearched(false);
 
     try {
-      const response = await fetch(`/api/participants/search?nim=${encodeURIComponent(nim)}`);
+      const response = await fetch(`/api/participants/search?npk=${encodeURIComponent(npk)}`);
       const data = await response.json();
 
       if (data.success) {
@@ -57,7 +57,7 @@ export default function CheckIn() {
         setSearched(true);
         setShowAddForm(true);
         setNewName('');
-        showMessage('error', 'NIM not found. Please register as a new participant.');
+        showMessage('error', 'NPK not found. Please register as a new participant.');
       }
     } catch (error) {
       showMessage('error', 'Failed to search participant');
@@ -99,7 +99,7 @@ export default function CheckIn() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: newName,
-          nim: nim,
+          npk: npk,
           category: newCategory,
           employment_type: newType,
           checked_in: 1
@@ -123,7 +123,7 @@ export default function CheckIn() {
   };
 
   const resetPage = () => {
-    setNim('');
+    setNpk('');
     setParticipant(null);
     setSearched(false);
     setShowAddForm(false);
@@ -203,7 +203,7 @@ export default function CheckIn() {
                     <Search className="w-8 h-8 text-showman-gold" />
                   </div>
                   <h2 className="text-2xl font-black text-white uppercase tracking-wider">Validate Attendance</h2>
-                  <p className="text-showman-gold-cream/60 text-sm">Enter NIM or NPK to check registration status</p>
+                  <p className="text-showman-gold-cream/60 text-sm">Enter NPK to check registration status</p>
                 </div>
 
                 <div className="relative">
@@ -212,9 +212,9 @@ export default function CheckIn() {
                   </div>
                   <input
                     type="text"
-                    value={nim}
-                    onChange={(e) => setNim(e.target.value)}
-                    placeholder="Masukkan NIM / NPK"
+                    value={npk}
+                    onChange={(e) => setNpk(e.target.value)}
+                    placeholder="Masukkan NPK"
                     className="w-full bg-showman-black border-2 border-showman-gold/20 rounded-2xl py-4 pl-12 pr-4 text-white font-bold text-lg focus:border-showman-gold focus:ring-4 focus:ring-showman-gold/10 outline-none transition-all placeholder:text-white/10"
                     autoFocus
                   />
@@ -222,14 +222,14 @@ export default function CheckIn() {
 
                 <button
                   type="submit"
-                  disabled={isLoading || !nim.trim()}
+                  disabled={isLoading || !npk.trim()}
                   className="w-full bg-gradient-to-r from-showman-red to-showman-red-dark hover:from-showman-red-dark hover:to-showman-red text-showman-gold font-black py-4 rounded-2xl shadow-lg border-2 border-white/10 hover:border-showman-gold/50 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center space-x-3 uppercase tracking-widest"
                 >
                   {isLoading ? (
                     <RefreshCw className="w-5 h-5 animate-spin" />
                   ) : (
                     <>
-                      <span>Check NIM / NPK</span>
+                      <span>Check NPK</span>
                       <ArrowRight className="w-5 h-5" />
                     </>
                   )}
@@ -271,8 +271,8 @@ export default function CheckIn() {
                         <Contact className="w-4 h-4 text-showman-gold-cream" />
                       </div>
                       <div>
-                        <p className="text-[9px] uppercase tracking-widest text-showman-gold-cream/40">NIM / NPK</p>
-                        <p className="text-sm font-bold text-white">{participant.nim}</p>
+                        <p className="text-[9px] uppercase tracking-widest text-showman-gold-cream/40">NPK</p>
+                        <p className="text-sm font-bold text-white">{participant.npk}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">

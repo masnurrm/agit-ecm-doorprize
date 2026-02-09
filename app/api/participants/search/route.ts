@@ -6,13 +6,13 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const nim = searchParams.get('nim');
+    const npk = searchParams.get('npk') || searchParams.get('nim');
 
-    if (!nim) {
-      return NextResponse.json({ success: false, error: 'NIM is required' }, { status: 400 });
+    if (!npk) {
+      return NextResponse.json({ success: false, error: 'NPK is required' }, { status: 400 });
     }
 
-    const participant = await participantsDb.getByNim(nim);
+    const participant = await participantsDb.getByNpk(npk);
 
     if (!participant) {
       return NextResponse.json({ success: false, error: 'Participant not found' }, { status: 404 });

@@ -9,7 +9,7 @@ import * as XLSX from 'xlsx';
 interface Participant {
   id: string;
   name: string;
-  nim: string;
+  npk: string;
   category: string;
   employment_type: string;
   is_winner: number;
@@ -27,7 +27,7 @@ interface Prize {
 interface Winner {
   id: string;
   name: string;
-  nim: string;
+  npk: string;
   prize_name: string;
   won_at: string;
 }
@@ -79,11 +79,11 @@ export default function AdminPage() {
         const participantsToImport = jsonData
           .map((row: any) => ({
             name: (row['Nama Karyawan'] || row['name'] || row['Nama'])?.toString().trim(),
-            nim: (row['NPK'] || row['NIM'] || row['nim'])?.toString().trim(),
+            npk: (row['NPK'] || row['NIM'] || row['nim'])?.toString().trim(),
             category: (row['Category'] || row['Kategori'])?.toString().trim() || 'Staff',
             employment_type: (row['Employment'] || row['Status'])?.toString().trim() || 'AGIT'
           }))
-          .filter((p: any) => p.name && p.nim);
+          .filter((p: any) => p.name && p.npk);
 
         if (participantsToImport.length === 0) {
           alert('Data tidak ditemukan. Pastikan header Excel adalah "Nama Karyawan" dan "NPK".');
@@ -118,7 +118,7 @@ export default function AdminPage() {
   const handleExportWinners = () => {
     const exportData = winners.map(winner => ({
       "Nama": winner.name,
-      "NPK": winner.nim,
+      "NPK": winner.npk,
       "Hadiah": winner.prize_name,
       "Tanggal undian": new Date(winner.won_at).toLocaleString('id-ID')
     }));
@@ -164,7 +164,7 @@ export default function AdminPage() {
       if (type === 'participant') {
         setFormData({
           name: item.name,
-          nim: item.nim,
+          npk: item.npk,
           category: item.category || 'Staff',
           employment_type: item.employment_type || 'AGIT',
           is_winner: item.is_winner,
@@ -181,7 +181,7 @@ export default function AdminPage() {
       }
     } else {
       setFormData(type === 'participant'
-        ? { name: '', nim: '', category: 'Staff', employment_type: 'AGIT', is_winner: 0, checked_in: 0 }
+        ? { name: '', npk: '', category: 'Staff', employment_type: 'AGIT', is_winner: 0, checked_in: 0 }
         : { prizeName: '', quota: 1, currentQuota: 1 }
       );
       setPreviewUrl(null);
@@ -518,7 +518,7 @@ export default function AdminPage() {
                           {participant.name}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-showman-gold-cream font-mono text-sm">
-                          {participant.nim}
+                          {participant.npk}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-showman-gold-cream text-sm">
                           {participant.category}
@@ -700,7 +700,7 @@ export default function AdminPage() {
                           {winner.name}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-showman-gold-cream font-mono text-sm">
-                          {winner.nim}
+                          {winner.npk}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-showman-gold/20 text-showman-gold border border-showman-gold/50">
@@ -772,14 +772,14 @@ export default function AdminPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-showman-gold-cream mb-1">NPK / ID</label>
+                      <label className="block text-sm font-medium text-showman-gold-cream mb-1">NPK</label>
                       <input
                         type="text"
                         required
                         className="w-full px-4 py-2 border-2 border-showman-gold/30 bg-showman-black-lighter text-white rounded-lg focus:ring-2 focus:ring-showman-gold focus:border-showman-gold outline-none transition-all"
                         placeholder="e.g., 12345678"
-                        value={formData.nim || ''}
-                        onChange={(e) => setFormData({ ...formData, nim: e.target.value })}
+                        value={formData.npk || ''}
+                        onChange={(e) => setFormData({ ...formData, npk: e.target.value })}
                       />
                     </div>
                     <div>

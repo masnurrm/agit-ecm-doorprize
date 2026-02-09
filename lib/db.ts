@@ -23,7 +23,7 @@ export async function initDatabase() {
       CREATE TABLE IF NOT EXISTS participants (
         id VARCHAR(255) PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
-        nim VARCHAR(255) NOT NULL,
+        npk VARCHAR(255) NOT NULL,
         category VARCHAR(100) DEFAULT 'Staff',
         employment_type VARCHAR(100) DEFAULT 'AGIT',
         is_winner TINYINT(1) DEFAULT 0,
@@ -33,6 +33,9 @@ export async function initDatabase() {
     `);
 
     // Add columns if they don't exist (primitive migration)
+    try {
+      await connection.query('ALTER TABLE participants RENAME COLUMN nim TO npk');
+    } catch (e) { }
     try {
       await connection.query('ALTER TABLE participants ADD COLUMN category VARCHAR(100) DEFAULT "Staff"');
     } catch (e) { }
@@ -98,21 +101,21 @@ export const participantsDb = {
   },
 
   getEligible: async () => {
-    const [rows] = await pool.query('SELECT * FROM participants WHERE is_winner = 0 AND checked_in = 1 ORDER BY name');
+    const [rows] = await pool.query("SELECT * FROM participants WHERE is_winner = 0 AND checked_in = 1 AND category = 'Staff' ORDER BY name");
     return rows as any[];
   },
 
-  getByNim: async (nim: string) => {
-    const [rows]: any = await pool.query('SELECT * FROM participants WHERE nim = ?', [nim]);
+  getByNpk: async (npk: string) => {
+    const [rows]: any = await pool.query('SELECT * FROM participants WHERE npk = ?', [npk]);
     return rows[0];
   },
 
-  create: async (id: string, name: string, nim: string, category: string = 'Staff', employmentType: string = 'AGIT', isWinner: number = 0, checkedIn: number = 0) => {
-    return pool.query('INSERT INTO participants (id, name, nim, category, employment_type, is_winner, checked_in) VALUES (?, ?, ?, ?, ?, ?, ?)', [id, name, nim, category, employmentType, isWinner, checkedIn]);
+  create: async (id: string, name: string, npk: string, category: string = 'Staff', employmentType: string = 'AGIT', isWinner: number = 0, checkedIn: number = 0) => {
+    return pool.query('INSERT INTO participants (id, name, npk, category, employment_type, is_winner, checked_in) VALUES (?, ?, ?, ?, ?, ?, ?)', [id, name, npk, category, employmentType, isWinner, checkedIn]);
   },
 
-  update: async (id: string, name: string, nim: string, category: string, employmentType: string, isWinner: number, checkedIn: number) => {
-    return pool.query('UPDATE participants SET name = ?, nim = ?, category = ?, employment_type = ?, is_winner = ?, checked_in = ? WHERE id = ?', [name, nim, category, employmentType, isWinner, checkedIn, id]);
+  update: async (id: string, name: string, npk: string, category: string, employmentType: string, isWinner: number, checkedIn: number) => {
+    return pool.query('UPDATE participants SET name = ?, npk = ?, category = ?, employment_type = ?, is_winner = ?, checked_in = ? WHERE id = ?', [name, npk, category, employmentType, isWinner, checkedIn, id]);
   },
 
   delete: async (id: string) => {
@@ -150,15 +153,16 @@ export const participantsDb = {
     }
   },
 
-  bulkCreate: async (participants: { id: string, name: string, nim: string, category?: string, employment_type?: string, checked_in?: number }[]) => {
-    const values = participants.map(p => [p.id, p.name, p.nim, p.category || 'Staff', p.employment_type || 'AGIT', p.checked_in || 0]);
-    return pool.query('INSERT INTO participants (id, name, nim, category, employment_type, checked_in) VALUES ?', [values]);
+  bulkCreate: async (participants: { id: string, name: string, npk: string, category?: string, employment_type?: string, checked_in?: number }[]) => {
+    const values = participants.map(p => [p.id, p.name, p.npk, p.category || 'Staff', p.employment_type || 'AGIT', p.checked_in || 0]);
+    return pool.query('INSERT INTO participants (id, name, npk, category, employment_type, checked_in) VALUES ?', [values]);
   },
 
   deleteMany: async (ids: string[]) => {
     return pool.query('DELETE FROM participants WHERE id IN (?)', [ids]);
   },
 };
+
 
 // Prize operations
 export const prizesDb = {
@@ -254,7 +258,7 @@ export const winnersDb = {
         w.participant_id,
         w.prize_id,
         p.name,
-        p.nim,
+        p.npk,
         pr.prize_name
       FROM winners w
       JOIN participants p ON w.participant_id = p.id
