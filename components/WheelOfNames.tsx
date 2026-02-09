@@ -38,17 +38,10 @@ export default function WheelOfNames({ participants, isRolling, isPaused = false
   const wheelData = useMemo(() => {
     if (participants.length === 0) return [];
 
-    // To make it look "full" if there are few participants, we repeat them
-    let displayParticipants = [...participants];
-    if (displayParticipants.length < 20 && displayParticipants.length > 0) {
-      const repeats = Math.ceil(20 / displayParticipants.length);
-      displayParticipants = Array(repeats).fill(displayParticipants).flat();
-    }
-
-    return displayParticipants.map((p, i) => ({
+    return participants.map((p, i) => ({
       ...p,
       color: COLORS[i % COLORS.length],
-      angle: 360 / (displayParticipants.length || 1)
+      angle: 360 / (participants.length || 1)
     }));
   }, [participants]);
 
@@ -194,8 +187,7 @@ export default function WheelOfNames({ participants, isRolling, isPaused = false
                 'Z'
               ].join(' ');
 
-              // Show more text if slices are large enough
-              const displayName = wheelData.length > 40 ? part.name.split(' ')[0] : part.name;
+              const displayName = wheelData.length > 60 ? part.name.split(' ')[0] : part.name;
 
               return (
                 <g key={`${part.id}-${i}`}>
@@ -211,7 +203,7 @@ export default function WheelOfNames({ participants, isRolling, isPaused = false
                       x={centerX + radius * 0.9}
                       y={centerY}
                       fill={part.color === '#0F0F0F' || part.color === '#1F1F1F' ? '#F59E0B' : '#FFFFFF'}
-                      fontSize={Math.max(6, Math.min(14, 800 / wheelData.length))}
+                      fontSize={Math.max(4, Math.min(40, 1000 / wheelData.length))}
                       fontWeight="900"
                       textAnchor="end"
                       dominantBaseline="middle"
@@ -237,10 +229,10 @@ export default function WheelOfNames({ participants, isRolling, isPaused = false
         </motion.svg>
 
         {/* Pointer/Needle */}
-        <div className="absolute right-[-20px] top-1/2 -translate-y-1/2 z-20">
+        <div className="absolute right-[-10px] top-1/2 -translate-y-1/2 z-20">
           <svg width="60" height="40" viewBox="0 0 60 40">
             <path
-              d="M 60 20 L 0 0 L 0 40 Z"
+              d="M 0 20 L 60 0 L 60 40 Z"
               fill="#F59E0B"
               stroke="#0F0F0F"
               strokeWidth="2"

@@ -738,7 +738,7 @@ export default function Home() {
                         className="w-full max-w-5xl overflow-hidden"
                       >
                         <WheelOfNames
-                          participants={eligibleParticipants}
+                          participants={eligibleParticipants.filter(p => !tentativeWinners.some(tw => tw.id === p.id))}
                           isRolling={isRolling}
                           isPaused={isPaused}
                           onComplete={handleSlotMachineComplete}
