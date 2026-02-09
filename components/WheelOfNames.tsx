@@ -189,6 +189,19 @@ export default function WheelOfNames({ participants, isRolling, isPaused = false
 
               const displayName = wheelData.length > 60 ? part.name.split(' ')[0] : part.name;
 
+              // Adaptive Font Size Calculation
+              // 1. Width Constraint: Space available between slice segments (chord distance)
+              const angleInRad = (angle * Math.PI) / 180;
+              const sliceWidthMid = wheelData.length === 1 ? radius : 2 * (radius * 0.75) * Math.sin(angleInRad / 2);
+              const maxFsWidth = sliceWidthMid * 0.7; // Use 70% of available width for padding
+
+              // 2. Length Constraint: Radial space available (Outer radius to center circle)
+              // Usable radial space is roughly 185px (225 anchor - 40 inner circle)
+              const maxFsLength = 180 / (displayName.length * 0.55);
+
+              // 3. Final Font Size: Take the minimum of all constraints and cap at a premium 32px
+              const fontSize = Math.max(6, Math.min(32, maxFsWidth, maxFsLength));
+
               return (
                 <g key={`${part.id}-${i}`}>
                   <path
@@ -203,7 +216,7 @@ export default function WheelOfNames({ participants, isRolling, isPaused = false
                       x={centerX + radius * 0.9}
                       y={centerY}
                       fill={part.color === '#0F0F0F' || part.color === '#1F1F1F' ? '#F59E0B' : '#FFFFFF'}
-                      fontSize={Math.max(4, Math.min(40, 1000 / wheelData.length))}
+                      fontSize={fontSize}
                       fontWeight="900"
                       textAnchor="end"
                       dominantBaseline="middle"
