@@ -192,14 +192,15 @@ export default function WheelOfNames({ participants, isRolling, isPaused = false
               // Adaptive Font Size Calculation
               // 1. Width Constraint: Space available between slice segments (chord distance)
               const angleInRad = (angle * Math.PI) / 180;
-              const sliceWidthMid = wheelData.length === 1 ? radius : 2 * (radius * 0.75) * Math.sin(angleInRad / 2);
+              const sliceWidthMid = wheelData.length === 1 ? radius : 2 * (radius * 0.7) * Math.sin(angleInRad / 2);
               const maxFsWidth = sliceWidthMid * 0.7; // Use 70% of available width for padding
 
-              // 2. Length Constraint: Radial space available (Outer radius to center circle)
-              // Usable radial space is roughly 185px (225 anchor - 40 inner circle)
-              const maxFsLength = 180 / (displayName.length * 0.55);
+              // 2. Length Constraint: Radial space available
+              // We leave a 60px safe zone in the center (40px logo + 20px padding)
+              // Usable length is (radius * 0.85) - 60 = ~150px
+              const maxFsLength = 150 / (displayName.length * 0.6);
 
-              // 3. Final Font Size: Take the minimum of all constraints and cap at a premium 32px
+              // 3. Final Font Size: Take the minimum of all constraints and cap at 32px
               const fontSize = Math.max(6, Math.min(32, maxFsWidth, maxFsLength));
 
               return (
@@ -213,7 +214,7 @@ export default function WheelOfNames({ participants, isRolling, isPaused = false
                   />
                   <g transform={`rotate(${startAngle + angle / 2}, ${centerX}, ${centerY})`}>
                     <text
-                      x={centerX + radius * 0.9}
+                      x={centerX + radius * 0.85}
                       y={centerY}
                       fill={part.color === '#0F0F0F' || part.color === '#1F1F1F' ? '#F59E0B' : '#FFFFFF'}
                       fontSize={fontSize}
