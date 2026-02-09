@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import SlotMachine from '@/components/SlotMachine';
+import WheelOfNames from '@/components/WheelOfNames';
 import WinnerCard from '@/components/WinnerCard';
 import { Gift, Sparkles, CheckCircle, Trophy, Users, AlertCircle, Settings, Menu, X as CloseIcon, LayoutDashboard, ChevronRight, Package } from 'lucide-react';
 import Link from 'next/link';
@@ -737,7 +737,7 @@ export default function Home() {
                         exit={{ height: 0, opacity: 0, scale: 0.95 }}
                         className="w-full max-w-5xl overflow-hidden"
                       >
-                        <SlotMachine
+                        <WheelOfNames
                           participants={eligibleParticipants}
                           isRolling={isRolling}
                           isPaused={isPaused}
