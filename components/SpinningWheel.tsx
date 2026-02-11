@@ -257,18 +257,14 @@ export default function SpinningWheel({ participants, isRolling, isPaused = fals
                 zCtx.rotate(idx * segmentAngle + segmentAngle / 2);
                 zCtx.translate(zoomRadius - 100, 0); // Moved 100px deep to match needle tip
 
-                // Giant text for audience reading
+                // Giant text for audience reading - Horizontal Format: Name | NPK
                 zCtx.fillStyle = TEXT_COLOR;
-                zCtx.font = 'black 90px Outfit, sans-serif';
+                zCtx.font = 'black 65px Outfit, sans-serif';
                 zCtx.textAlign = 'right';
                 zCtx.textBaseline = 'middle';
 
-                const text = p.name.toUpperCase();
-                zCtx.fillText(text, 0, -25);
-
-                zCtx.font = 'bold 40px Outfit, sans-serif';
-                zCtx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-                zCtx.fillText(p.nim, 0, 50);
+                const text = `${p.name.toUpperCase()} | ${p.nim}`;
+                zCtx.fillText(text, 0, 0);
                 zCtx.restore();
             }
             zCtx.restore();
@@ -299,6 +295,14 @@ export default function SpinningWheel({ participants, isRolling, isPaused = fals
 
             const now = Date.now();
 
+            if (!isRolling) {
+                isStartedRef.current = false;
+                isSpinningRef.current = false;
+                isSettlingRef.current = false;
+                isStoppedRef.current = false;
+                targetIndexRef.current = null;
+            }
+
             if (isRolling && !isStartedRef.current) {
                 isStartedRef.current = true;
                 isSpinningRef.current = true;
@@ -316,7 +320,7 @@ export default function SpinningWheel({ participants, isRolling, isPaused = fals
                     targetIndexRef.current = Math.floor(Math.random() * participants.length);
                 }
 
-                const sliceAngle = (2 * Math.PI) / (participants.length + 1);
+                const sliceAngle = (2 * Math.PI) / (participants.length - 1);
                 // Pointer is at 0 degrees, which is at the EDGE of the segment, not the center
                 const targetAngleOfSegment = (targetIndexRef.current! * sliceAngle);
 

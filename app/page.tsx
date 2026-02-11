@@ -218,13 +218,23 @@ export default function Home() {
 
   useEffect(() => {
     const rollQuantity = typeof quantity === 'string' ? parseInt(quantity) : quantity;
+    // DEBUG: Trace auto-roll triggers
+    if (isSequenceActive && !isRolling && !revealedWinner && !showConfetti) {
+      console.log(`[DRAW_DEBUG] Mode: ${rollMode}, Winners: ${tentativeWinners.length}/${rollQuantity}`);
+    }
+
     // Wait for rolling to stop AND confetti to finish AND reveal to finish
-    // Only auto-spin for slot mode, wheel mode requires manual click
-    if (!isRolling && !showConfetti && !revealedWinner && isSequenceActive && tentativeWinners.length < (rollQuantity || 0) && rollMode === 'slot') {
-      const timer = setTimeout(() => {
-        setIsRolling(true);
-      }, 1000); // reduced delay since confetti adds time
-      return () => clearTimeout(timer);
+    if (!isRolling && !showConfetti && !revealedWinner && isSequenceActive && tentativeWinners.length < (rollQuantity || 0)) {
+      if (rollMode === 'slot') {
+        const timer = setTimeout(() => {
+          console.log("[DRAW_DEBUG] Auto-triggering next slot spin");
+          setIsRolling(true);
+        }, 1000);
+        return () => clearTimeout(timer);
+      } else {
+        // Wheel mode: Do nothing, wait for manual click
+        console.log("[DRAW_DEBUG] Wheel mode waiting for manual click");
+      }
     } else if (!isRolling && !showConfetti && !revealedWinner && isSequenceActive && tentativeWinners.length === rollQuantity) {
       setIsSequenceActive(false);
       showMessage('success', 'Draw complete! All winners revealed.');
@@ -279,6 +289,9 @@ export default function Home() {
         setTimeout(() => {
           setIsRolling(true);
         }, 1500);
+      } else {
+        // For wheel mode, we just stop and wait for manual click
+        setIsSequenceActive(true); // Keep the sequence active so they can click again
       }
     }
   };
@@ -878,9 +891,12 @@ export default function Home() {
                                           exit={{ opacity: 0, scale: 0.8 }}
                                         >
                                           <div className="bg-showman-gold/5 border border-showman-gold/10 p-2.5 rounded-xl flex items-center justify-between group hover:bg-showman-gold/10 transition-all">
-                                            <div className="flex-1 min-w-0">
-                                              <p className="text-showman-gold-cream font-bold text-xs uppercase truncate">{winner.name}</p>
-                                              <p className="text-white/20 text-[9px] font-medium">{winner.nim}</p>
+                                            <div className="flex-1 min-w-0 pr-2">
+                                              <p className="text-showman-gold-cream font-bold text-sm uppercase truncate flex items-center gap-4">
+                                                <span className="whitespace-nowrap">{winner.name}</span>
+                                                <span className="text-white/20 font-light">|</span>
+                                                <span className="text-showman-gold/90 font-mono font-bold tracking-wider">{winner.nim}</span>
+                                              </p>
                                             </div>
                                             <button
                                               onClick={() => setTentativeWinners(prev => prev.filter(w => w.id !== winner.id))}
