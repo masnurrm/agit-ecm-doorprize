@@ -58,7 +58,7 @@ export default function CheckIn() {
         setSearched(true);
         setShowAddForm(true);
         setNewName('');
-        showMessage('error', 'NIM not found. Please register as a new participant.');
+        showMessage('error', 'NPK not found. Please register as a new participant.');
       }
     } catch (error) {
       showMessage('error', 'Failed to search participant');
