@@ -204,7 +204,7 @@ export const participantsDb = {
       let winnerInfo = null;
 
       // 6. Check for match (Only for participants who aren't already winners)
-      if (randomDigit === piDigit && participant.is_winner === 0) {
+      if (randomDigit === piDigit && participant.is_winner !== 1) {
         // 7. Select random available prize
         const [prizeRows]: any = await connection.query('SELECT * FROM prizes WHERE current_quota > 0 FOR UPDATE');
         if (prizeRows.length > 0) {
