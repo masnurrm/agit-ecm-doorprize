@@ -62,7 +62,7 @@ export default function SpinningWheel({ participants, isRolling, isPaused = fals
 
     const updatePointed = (rotation: number) => {
         if (!onPointerTick) return;
-        const { index, participant } = getWinnerAtRotation(rotation);
+        const { participant } = getWinnerAtRotation(rotation);
         if (participant && participant.id !== lastPointedRef.current) {
             lastPointedRef.current = participant.id;
             onPointerTick(participant);
@@ -136,9 +136,9 @@ export default function SpinningWheel({ participants, isRolling, isPaused = fals
     };
 
     useEffect(() => {
-        // Reset baked canvas when participants change
+        // Reset baked canvas when participants or their order changes
         bakedCanvasRef.current = null;
-    }, [participants.length]);
+    }, [participants]);
 
     useEffect(() => {
         if (participants.length === 0) return;
@@ -214,11 +214,9 @@ export default function SpinningWheel({ participants, isRolling, isPaused = fals
             zCtx.translate(centerX, centerY);
             const currentZoomRot = isSpinningRef.current || isSettlingRef.current ? rotationRef.current : (zoomRotationRef.current % (2 * Math.PI));
             zCtx.rotate(currentZoomRot);
-
-            // Find segment currently at 0 degrees
-            const currentRot = currentZoomRot % (2 * Math.PI);
-            const targetRot = (2 * Math.PI - currentRot) % (2 * Math.PI);
-            const targetIndex = Math.floor(targetRot / segmentAngle);
+            // Source of truth synchronization for viewfinder
+            const normalizedRot = ((currentZoomRot % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+            const { index: targetIndex } = getWinnerAtRotation(normalizedRot);
 
             // Draw tiny sliver of the wheel (approx 5-10 names)
             const safetyRange = 8; // Narrow window for extreme magnification
@@ -301,8 +299,9 @@ export default function SpinningWheel({ participants, isRolling, isPaused = fals
                     targetIndexRef.current = Math.floor(Math.random() * participants.length);
                 }
 
-                const sliceAngle = (2 * Math.PI) / participants.length;
-                const targetAngleOfSegment = (targetIndexRef.current! * sliceAngle) + (sliceAngle / 2);
+                const sliceAngle = (2 * Math.PI) / (participants.length + 1);
+                // Pointer is at 0 degrees, which is at the EDGE of the segment, not the center
+                const targetAngleOfSegment = (targetIndexRef.current! * sliceAngle);
 
                 // We want: targetAngleOfSegment + totalRotation = Multiples of 2PI
                 // So targetRotationDistance = (Large Multiple of 2PI) - targetAngleOfSegment - currentRotation
@@ -333,8 +332,9 @@ export default function SpinningWheel({ participants, isRolling, isPaused = fals
                     isStoppedRef.current = true;
                     isSettlingRef.current = true;
 
-                    // Source of truth: Identify exactly who is at the needle on the dead-stop
-                    const { participant } = getWinnerAtRotation(rotationRef.current);
+                    // Source of truth: Use targetIndexRef if available, otherwise fallback to rotation mapping
+                    const targetIdx = targetIndexRef.current !== null ? targetIndexRef.current : getWinnerAtRotation(rotationRef.current).index;
+                    const participant = participants[targetIdx];
 
                     // Add 2s settle delay at EXACTLY zero speed before revealing any winner info
                     setTimeout(() => {
@@ -352,9 +352,9 @@ export default function SpinningWheel({ participants, isRolling, isPaused = fals
                 }
             } else if (!isRolling && !isSettlingRef.current) {
                 if (targetIndexRef.current === null) {
-                    // Dramatic 10:1 Idle speeds
-                    rotationRef.current += 0.001; // Main Wheel: Active energy
-                    zoomRotationRef.current += 0.0001; // Viewfinder: Super-slow crawl
+                    // Force synchronization during idle to avoid divergence
+                    rotationRef.current += 0.001;
+                    zoomRotationRef.current = rotationRef.current;
                 }
             }
 
