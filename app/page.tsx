@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SlotMachine from '@/components/SlotMachine';
+import SpinningWheel from '@/components/SpinningWheel';
 import WinnerCard from '@/components/WinnerCard';
+import WinnerReveal from '@/components/WinnerReveal';
 import { Gift, Sparkles, CheckCircle, Trophy, Users, AlertCircle, Settings, Menu, X as CloseIcon, LayoutDashboard, ChevronRight, Package } from 'lucide-react';
 import Link from 'next/link';
 
@@ -41,6 +43,8 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [rollMode, setRollMode] = useState<'slot' | 'wheel'>('slot');
+  const [revealedWinner, setRevealedWinner] = useState<Participant | null>(null);
 
   // Sound Effects Refs
   const drumRollRef = useRef<HTMLAudioElement | null>(null);
@@ -210,17 +214,17 @@ export default function Home() {
 
   useEffect(() => {
     const rollQuantity = typeof quantity === 'string' ? parseInt(quantity) : quantity;
-    // Wait for rolling to stop AND confetti to finish
-    if (!isRolling && !showConfetti && isSequenceActive && tentativeWinners.length < (rollQuantity || 0)) {
+    // Wait for rolling to stop AND confetti to finish AND reveal to finish
+    if (!isRolling && !showConfetti && !revealedWinner && isSequenceActive && tentativeWinners.length < (rollQuantity || 0)) {
       const timer = setTimeout(() => {
         setIsRolling(true);
       }, 1000); // reduced delay since confetti adds time
       return () => clearTimeout(timer);
-    } else if (!isRolling && !showConfetti && isSequenceActive && tentativeWinners.length === rollQuantity) {
+    } else if (!isRolling && !showConfetti && !revealedWinner && isSequenceActive && tentativeWinners.length === rollQuantity) {
       setIsSequenceActive(false);
       showMessage('success', 'Draw complete! All winners revealed.');
     }
-  }, [isRolling, showConfetti, isSequenceActive, tentativeWinners.length, quantity]);
+  }, [isRolling, showConfetti, revealedWinner, isSequenceActive, tentativeWinners.length, quantity]);
 
   // Stabilize the complete callback to prevent unnecessary re-effects in SlotMachine
   const handleSlotMachineComplete = (landedParticipant: Participant) => {
@@ -235,8 +239,8 @@ export default function Home() {
     const isEligible = eligibleParticipants.some(p => p.id === landedParticipant.id);
 
     if (isEligible && !isAlreadyTentative) {
-      // VALID WINNER
-      setTentativeWinners(prev => [landedParticipant, ...prev]);
+      // VALID WINNER - SHOW REVEAL FIRST
+      setRevealedWinner(landedParticipant);
       setIsRolling(false);
 
       // Play Yay Sound
@@ -250,14 +254,14 @@ export default function Home() {
             yayRef.current.pause();
             yayRef.current.currentTime = 0;
           }
-        }, 2000);
+        }, 3000); // Extended for reveal duration
       }
 
       // Trigger Confetti
       setShowConfetti(true);
       setTimeout(() => {
         setShowConfetti(false);
-      }, 2000); // 2 seconds duration for GIF
+      }, 3000);
     } else {
       // NOT ELIGIBLE - Stop rolling state first so it can be re-triggered
       setIsRolling(false);
@@ -271,6 +275,19 @@ export default function Home() {
       }, 1500);
     }
   };
+
+  // Handle Reveal Timer
+  useEffect(() => {
+    if (revealedWinner) {
+      const timer = setTimeout(() => {
+        // Add to list and clear reveal
+        setTentativeWinners(prev => [revealedWinner, ...prev]);
+        setRevealedWinner(null);
+      }, 3000); // 3 Seconds Reveal Duration
+
+      return () => clearTimeout(timer);
+    }
+  }, [revealedWinner]);
 
   const handleRemoveWinner = (id: string) => {
     setTentativeWinners((prev) => prev.filter((w) => w.id !== id));
@@ -651,6 +668,25 @@ export default function Home() {
                               className="w-full px-4 py-3 rounded-xl border-2 border-showman-gold/40 bg-showman-black text-center text-sm font-bold text-white placeholder:text-showman-gold-cream/20 focus:border-showman-gold focus:ring-4 focus:ring-showman-gold/10 outline-none transition-all"
                             />
                           </div>
+
+                          {/* Roll Mode Toggle */}
+                          <div className="flex bg-showman-black border-2 border-showman-gold/20 rounded-xl p-1 relative">
+                            <div
+                              className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-showman-gold rounded-lg transition-all duration-300 ${rollMode === 'slot' ? 'left-1' : 'left-[calc(50%+4px)]'}`}
+                            ></div>
+                            <button
+                              onClick={() => setRollMode('slot')}
+                              className={`flex-1 relative z-10 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${rollMode === 'slot' ? 'text-showman-black' : 'text-showman-gold-cream/60 hover:text-showman-gold'}`}
+                            >
+                              Slot Machine
+                            </button>
+                            <button
+                              onClick={() => setRollMode('wheel')}
+                              className={`flex-1 relative z-10 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${rollMode === 'wheel' ? 'text-showman-black' : 'text-showman-gold-cream/60 hover:text-showman-gold'}`}
+                            >
+                              Spinning Wheel
+                            </button>
+                          </div>
                         </div>
 
                         <button
@@ -737,12 +773,23 @@ export default function Home() {
                         exit={{ height: 0, opacity: 0, scale: 0.95 }}
                         className="w-full max-w-5xl overflow-hidden"
                       >
-                        <SlotMachine
-                          participants={eligibleParticipants}
-                          isRolling={isRolling}
-                          isPaused={isPaused}
-                          onComplete={handleSlotMachineComplete}
-                        />
+                        {rollMode === 'slot' ? (
+                          <SlotMachine
+                            participants={eligibleParticipants}
+                            isRolling={isRolling}
+                            isPaused={isPaused}
+                            onComplete={handleSlotMachineComplete}
+                          />
+                        ) : (
+                          <div className="flex justify-center w-full py-4">
+                            <SpinningWheel
+                              participants={eligibleParticipants}
+                              isRolling={isRolling}
+                              isPaused={isPaused}
+                              onComplete={handleSlotMachineComplete}
+                            />
+                          </div>
+                        )}
 
                         {/* Pause/Resume Button */}
                         <div className="flex justify-center mt-4">
@@ -758,6 +805,17 @@ export default function Home() {
                     )}
                   </AnimatePresence>
                 </div>
+
+                {/* Winner Reveal Popup */}
+                <AnimatePresence>
+                  {revealedWinner && (
+                    <WinnerReveal
+                      winner={revealedWinner}
+                      prizeName={selectedPrize?.prize_name}
+                      prizeImage={selectedPrize?.image_url || getPrizeImage(selectedPrize?.prize_name || '') || undefined}
+                    />
+                  )}
+                </AnimatePresence>
 
                 {/* Results Section in Overlay */}
                 <div className="w-full space-y-2 px-4 sm:px-10 py-2">
@@ -864,9 +922,10 @@ export default function Home() {
                 </div>
               </motion.div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </main>
-    </div>
+          )
+          }
+        </AnimatePresence >
+      </main >
+    </div >
   );
 }
