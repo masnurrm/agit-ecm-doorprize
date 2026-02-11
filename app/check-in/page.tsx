@@ -25,6 +25,7 @@ export default function CheckIn() {
   const [searched, setSearched] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [winnerResult, setWinnerResult] = useState<any>(null);
 
   // Add Form State
   const [newName, setNewName] = useState('');
@@ -78,7 +79,12 @@ export default function CheckIn() {
       const data = await response.json();
       if (data.success) {
         setParticipant({ ...participant, checked_in: 1 });
-        showMessage('success', `${participant.name} checked in successfully!`);
+
+        if (data.data && data.data.winnerInfo) {
+          setWinnerResult(data.data.winnerInfo);
+        } else {
+          showMessage('success', `${participant.name} checked in successfully!`);
+        }
       } else {
         showMessage('error', data.error || 'Failed to check in');
       }
@@ -109,7 +115,11 @@ export default function CheckIn() {
       const data = await response.json();
 
       if (data.success) {
-        showMessage('success', 'Registration & Check-in successful!');
+        if (data.data && data.data.winnerInfo) {
+          setWinnerResult(data.data.winnerInfo);
+        } else {
+          showMessage('success', 'Registration & Check-in successful!');
+        }
         // Refresh by searching for the same NIM again to show full info
         await handleSearch();
       } else {
@@ -128,6 +138,7 @@ export default function CheckIn() {
     setSearched(false);
     setShowAddForm(false);
     setMessage(null);
+    setWinnerResult(null);
   };
 
   return (
@@ -273,15 +284,6 @@ export default function CheckIn() {
                       <div>
                         <p className="text-[9px] uppercase tracking-widest text-showman-gold-cream/40">NIM / NPK</p>
                         <p className="text-sm font-bold text-white">{participant.nim}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <div className="bg-white/5 p-2 rounded-lg">
-                        <Briefcase className="w-4 h-4 text-showman-gold-cream" />
-                      </div>
-                      <div>
-                        <p className="text-[9px] uppercase tracking-widest text-showman-gold-cream/40">Position</p>
-                        <p className="text-sm font-bold text-white">{participant.category}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
@@ -442,6 +444,71 @@ export default function CheckIn() {
           </span>
         </motion.div>
       </Link>
+
+      {/* Winner Modal */}
+      <AnimatePresence>
+        {winnerResult && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/90 backdrop-blur-xl"
+              onClick={() => setWinnerResult(null)}
+            />
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0, rotate: -5 }}
+              animate={{ scale: 1, opacity: 1, rotate: 0 }}
+              exit={{ scale: 0.5, opacity: 0, rotate: 5 }}
+              className="relative bg-gradient-to-b from-showman-gold to-showman-gold-dark p-1 rounded-[2.5rem] shadow-[0_0_100px_rgba(212,175,55,0.5)] max-w-md w-full overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-[url('/images/Background Doorprize-05.png')] opacity-10 mix-blend-overlay" />
+
+              <div className="bg-showman-black/90 rounded-[2.3rem] p-8 relative overflow-hidden flex flex-col items-center text-center">
+                {/* Decorative Elements */}
+                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-showman-gold to-transparent opacity-50" />
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
+                  transition={{ repeat: Infinity, duration: 4 }}
+                  className="w-24 h-24 bg-showman-gold rounded-full flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(212,175,55,0.4)] border-4 border-showman-gold-cream"
+                >
+                  <Trophy className="w-12 h-12 text-showman-black" />
+                </motion.div>
+
+                <h3 className="text-4xl font-black text-showman-gold uppercase tracking-tighter mb-2">
+                  CONGRATULATIONS!
+                </h3>
+                <p className="text-white/60 text-sm uppercase tracking-[0.3em] font-bold mb-8">
+                  Instant Win Prize
+                </p>
+
+                <div className="w-full bg-white/5 border border-showman-gold/20 rounded-2xl p-6 mb-8 relative group">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-showman-gold text-showman-black text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
+                    Your Reward
+                  </div>
+                  {winnerResult.image_url && (
+                    <img
+                      src={winnerResult.image_url}
+                      alt={winnerResult.prize_name}
+                      className="w-full aspect-video object-contain mb-4 rounded-lg bg-black/40 p-2"
+                    />
+                  )}
+                  <h4 className="text-2xl font-black text-white uppercase tracking-tight">
+                    {winnerResult.prize_name}
+                  </h4>
+                </div>
+
+                <button
+                  onClick={() => setWinnerResult(null)}
+                  className="w-full bg-showman-gold hover:bg-showman-gold-cream text-showman-black font-black py-4 rounded-xl transition-all uppercase tracking-[0.2em] shadow-lg active:scale-95"
+                >
+                  AWESOME!
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

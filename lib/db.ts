@@ -3,6 +3,13 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// 10,000 digits of Pi (decimal expansion)
+const PI_DIGITS = "1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679" +
+  "8214808651328230664709384460955058223172535940812848111745028410270193852110555964462294895493038196" +
+  "4428810975665933446128475648233786783165271201909145648566923460348610454326648213393607260249141273" +
+  "7245870066063155881748815209209628292540917153643678925903600113305305488204665213841469519415116094" +
+  "3305727036575959195309218611738193261179310511854807446237996274956735188575272489122793818301194912";
+
 // Create a connection pool
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
@@ -43,6 +50,11 @@ export async function initDatabase() {
       await connection.query('ALTER TABLE participants ADD COLUMN checked_in TINYINT(1) DEFAULT 0');
     } catch (e) { }
 
+    // Add unique constraint to nim (attendee_id)
+    try {
+      await connection.query('CREATE UNIQUE INDEX idx_participants_nim ON participants (nim)');
+    } catch (e) { }
+
     // Create prizes table
     await connection.query(`
       CREATE TABLE IF NOT EXISTS prizes (
@@ -80,6 +92,20 @@ export async function initDatabase() {
         INDEX (prize_id)
       )
     `);
+
+    // Create settings table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS settings (
+        setting_key VARCHAR(255) PRIMARY KEY,
+        setting_value VARCHAR(255) NOT NULL
+      )
+    `);
+
+    // Initialize check_in_position if it doesn't exist
+    const [settingRows]: any = await connection.query('SELECT * FROM settings WHERE setting_key = "current_check_in_position"');
+    if (settingRows.length === 0) {
+      await connection.query('INSERT INTO settings (setting_key, setting_value) VALUES ("current_check_in_position", "0")');
+    }
 
     console.log('Database initialized successfully!');
   } catch (error) {
@@ -128,7 +154,75 @@ export const participantsDb = {
   },
 
   markAsCheckedIn: async (id: string) => {
-    return pool.query('UPDATE participants SET checked_in = 1 WHERE id = ?', [id]);
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      // 1. Idempotency: Check if already checked in
+      const [participantRows]: any = await connection.query('SELECT * FROM participants WHERE id = ? FOR UPDATE', [id]);
+      const participant = participantRows[0];
+      if (!participant) throw new Error('Participant not found');
+      if (participant.checked_in) {
+        await connection.rollback();
+        return { alreadyCheckedIn: true };
+      }
+
+      // 2. Increment sequential position
+      const [settingRows]: any = await connection.query('SELECT setting_value FROM settings WHERE setting_key = "current_check_in_position" FOR UPDATE');
+      const currentPosition = parseInt(settingRows[0].setting_value);
+      const nextPosition = currentPosition + 1;
+      await connection.query('UPDATE settings SET setting_value = ? WHERE setting_key = "current_check_in_position"', [nextPosition.toString()]);
+
+      // 3. Update participant as checked in
+      await connection.query('UPDATE participants SET checked_in = 1 WHERE id = ?', [id]);
+
+      // 4. Get Pi digit at current position (nextPosition is 1st, 2nd, 3rd...)
+      // PI = 3.14159... decimal expansion starts at index 0 (1st digit after decimal)
+      const piDigit = parseInt(PI_DIGITS[currentPosition % PI_DIGITS.length]);
+
+      // 5. Generate random digit (0-9)
+      const randomDigit = Math.floor(Math.random() * 10);
+
+      let winnerInfo = null;
+
+      // 6. Check for match
+      if (randomDigit === piDigit) {
+        // 7. Select random available prize
+        const [prizeRows]: any = await connection.query('SELECT * FROM prizes WHERE current_quota > 0 FOR UPDATE');
+        if (prizeRows.length > 0) {
+          // Select one random prize from available
+          const randomPrizeIndex = Math.floor(Math.random() * prizeRows.length);
+          const prize = prizeRows[randomPrizeIndex];
+
+          const winnerId = `winner_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+          // 8. Atomic operations: record winner and decrement quota
+          await connection.query('UPDATE participants SET is_winner = 1 WHERE id = ?', [id]);
+          await connection.query('INSERT INTO winners (id, participant_id, prize_id) VALUES (?, ?, ?)', [winnerId, id, prize.id]);
+          await connection.query('UPDATE prizes SET current_quota = current_quota - 1 WHERE id = ?', [prize.id]);
+
+          winnerInfo = {
+            won: true,
+            prize_name: prize.prize_name,
+            image_url: prize.image_url
+          };
+        }
+      }
+
+      await connection.commit();
+      return {
+        success: true,
+        position: nextPosition,
+        piDigit,
+        randomDigit,
+        winnerInfo
+      };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   },
 
   resetAll: async () => {
