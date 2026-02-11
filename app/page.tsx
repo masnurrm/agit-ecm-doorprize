@@ -45,6 +45,8 @@ export default function Home() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [rollMode, setRollMode] = useState<'slot' | 'wheel'>('slot');
   const [revealedWinner, setRevealedWinner] = useState<Participant | null>(null);
+  const [pointedParticipant, setPointedParticipant] = useState<Participant | null>(null);
+  const zoomCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Sound Effects Refs
   const drumRollRef = useRef<HTMLAudioElement | null>(null);
@@ -209,13 +211,16 @@ export default function Home() {
     setIsPaused(false);
     setShowResults(true);
     setIsSequenceActive(true);
-    setIsRolling(true);
+
+    // For wheel mode, we start in "passive spin" (isRolling=false)
+    // For slot mode, we start the roll immediately
+    setIsRolling(rollMode === 'slot');
   };
 
   useEffect(() => {
     const rollQuantity = typeof quantity === 'string' ? parseInt(quantity) : quantity;
     // Wait for rolling to stop AND confetti to finish AND reveal to finish
-    if (!isRolling && !showConfetti && !revealedWinner && isSequenceActive && tentativeWinners.length < (rollQuantity || 0)) {
+    if (!isRolling && !showConfetti && !revealedWinner && isSequenceActive && tentativeWinners.length < (rollQuantity || 0) && rollMode === 'slot') {
       const timer = setTimeout(() => {
         setIsRolling(true);
       }, 1000); // reduced delay since confetti adds time
@@ -764,46 +769,134 @@ export default function Home() {
                     )}
                   </div>
 
-                  {/* Slot Machine in Overlay - Hide when complete */}
-                  <AnimatePresence>
-                    {isSequenceActive && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0, scale: 0.95 }}
-                        animate={{ height: 'auto', opacity: 1, scale: 1 }}
-                        exit={{ height: 0, opacity: 0, scale: 0.95 }}
-                        className="w-full max-w-5xl overflow-hidden"
-                      >
-                        {rollMode === 'slot' ? (
-                          <SlotMachine
-                            participants={eligibleParticipants}
-                            isRolling={isRolling}
-                            isPaused={isPaused}
-                            onComplete={handleSlotMachineComplete}
-                          />
-                        ) : (
-                          <div className="flex justify-center w-full py-4">
-                            <SpinningWheel
-                              participants={eligibleParticipants}
-                              isRolling={isRolling}
-                              isPaused={isPaused}
-                              onComplete={handleSlotMachineComplete}
-                            />
-                          </div>
-                        )}
-
-                        {/* Pause/Resume Button */}
-                        <div className="flex justify-center mt-4">
-                          <button
-                            onClick={() => setIsPaused(!isPaused)}
-                            className="bg-showman-gold/10 hover:bg-showman-gold/20 text-showman-gold border border-showman-gold/30 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest transition-all flex items-center space-x-2"
+                  {/* Machine Section */}
+                  <div className={`w-full ${rollMode === 'wheel' ? 'max-w-7xl' : 'max-w-5xl'}`}>
+                    {rollMode === 'slot' ? (
+                      /* SLOT MACHINE VIEW (Centered) */
+                      <div className="w-full flex flex-col items-center">
+                        <AnimatePresence>
+                          {isSequenceActive && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0, scale: 0.95 }}
+                              animate={{ height: 'auto', opacity: 1, scale: 1 }}
+                              exit={{ height: 0, opacity: 0, scale: 0.95 }}
+                              className="w-full overflows-hidden"
+                            >
+                              <SlotMachine
+                                participants={eligibleParticipants}
+                                isRolling={isRolling}
+                                isPaused={isPaused}
+                                onComplete={handleSlotMachineComplete}
+                              />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    ) : (
+                      /* SPINNING WHEEL 3-SECTION VIEW (Split) */
+                      <AnimatePresence>
+                        {isSequenceActive && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start min-h-[500px]"
                           >
-                            <span className="w-2 h-2 rounded-full bg-showman-gold animate-pulse"></span>
-                            <span>{isPaused ? 'Lanjutkan Roll' : 'Pause Roll'}</span>
-                          </button>
-                        </div>
-                      </motion.div>
+                            {/* LEFT SECTION: Spinning Wheel */}
+                            <div className="w-full flex justify-center">
+                              <SpinningWheel
+                                participants={eligibleParticipants}
+                                isRolling={isRolling}
+                                isPaused={isPaused}
+                                onComplete={handleSlotMachineComplete}
+                                onPointerTick={(p) => setPointedParticipant(p)}
+                                onStart={() => setIsRolling(true)}
+                                zoomCanvasRef={zoomCanvasRef}
+                              />
+                            </div>
+
+                            {/* RIGHT SECTION: Zoom + Winners */}
+                            <div className="flex flex-col h-full lg:h-[500px] space-y-6">
+                              {/* Zoom Preview (Theatrical Viewfinder) */}
+                              <div className="bg-showman-black/60 border-2 border-showman-gold/30 rounded-3xl backdrop-blur-md flex flex-col flex-1 relative overflow-hidden group shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                                {/* Viewfinder Frame and Glass Effects */}
+                                <div className="absolute inset-0 pointer-events-none border-[12px] border-showman-black/40 rounded-3xl z-10"></div>
+                                <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_60px_rgba(0,0,0,0.8)] z-10"></div>
+                                <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white/5 via-transparent to-black/20 z-10"></div>
+
+                                <div className="absolute top-4 left-6 z-20">
+                                  <p className="text-showman-gold/40 text-[10px] font-black uppercase tracking-[0.4em] flex items-center">
+                                    <span className="w-2 h-2 bg-showman-red rounded-full mr-2 animate-pulse"></span>
+                                    Live Needle View
+                                  </p>
+                                </div>
+
+                                {/* ZOOM CANVAS */}
+                                <div className="flex-1 w-full bg-[#050505] relative cursor-none">
+                                  <canvas
+                                    ref={zoomCanvasRef}
+                                    className="w-full h-full opacity-90"
+                                  />
+
+                                  {/* Static Masking Overlays (Fading effect top/bottom) */}
+                                  <div className="absolute top-0 left-0 w-full h-[35%] bg-gradient-to-b from-[#050505] to-transparent z-5"></div>
+                                  <div className="absolute bottom-0 left-0 w-full h-[35%] bg-gradient-to-t from-[#050505] to-transparent z-5"></div>
+
+                                  {/* Center Highlighting Bar (Slot Focus) */}
+                                  <div className="absolute top-1/2 left-0 w-full h-40 -translate-y-1/2 bg-showman-gold/5 border-y border-showman-gold/10 pointer-events-none z-5"></div>
+                                </div>
+                              </div>
+
+                              {/* Winners History */}
+                              <div className="flex-[1.5] flex flex-col min-h-0 bg-showman-black/40 border border-showman-gold/10 rounded-3xl p-4 backdrop-blur-sm">
+                                <div className="flex items-center justify-between mb-3 px-2">
+                                  <h4 className="text-showman-gold font-black uppercase tracking-widest text-[10px] flex items-center">
+                                    <Trophy className="w-3 h-3 mr-2" />
+                                    Recent Winners
+                                  </h4>
+                                  <span className="text-showman-gold/40 text-[10px] font-bold">{tentativeWinners.length} / {quantity}</span>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar space-y-2">
+                                  <AnimatePresence mode="popLayout">
+                                    {tentativeWinners.length > 0 ? (
+                                      tentativeWinners.map((winner) => (
+                                        <motion.div
+                                          key={winner.id}
+                                          layout
+                                          initial={{ opacity: 0, x: 20 }}
+                                          animate={{ opacity: 1, x: 0 }}
+                                          exit={{ opacity: 0, scale: 0.8 }}
+                                        >
+                                          <div className="bg-showman-gold/5 border border-showman-gold/10 p-2.5 rounded-xl flex items-center justify-between group hover:bg-showman-gold/10 transition-all">
+                                            <div className="flex-1 min-w-0">
+                                              <p className="text-showman-gold-cream font-bold text-xs uppercase truncate">{winner.name}</p>
+                                              <p className="text-white/20 text-[9px] font-medium">{winner.nim}</p>
+                                            </div>
+                                            <button
+                                              onClick={() => setTentativeWinners(prev => prev.filter(w => w.id !== winner.id))}
+                                              className="p-1 px-2 text-white/20 hover:text-showman-red transition-colors opacity-0 group-hover:opacity-100 text-[10px] font-black uppercase tracking-tighter"
+                                            >
+                                              Remove
+                                            </button>
+                                          </div>
+                                        </motion.div>
+                                      ))
+                                    ) : (
+                                      <div className="h-full flex flex-col items-center justify-center border border-dashed border-white/5 rounded-2xl py-10 opacity-20">
+                                        <Sparkles className="w-6 h-6 mb-2" />
+                                        <p className="text-[9px] font-bold uppercase tracking-widest text-center">Awaiting Results</p>
+                                      </div>
+                                    )}
+                                  </AnimatePresence>
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     )}
-                  </AnimatePresence>
+                  </div>
                 </div>
 
                 {/* Winner Reveal Popup */}
@@ -817,109 +910,111 @@ export default function Home() {
                   )}
                 </AnimatePresence>
 
-                {/* Results Section in Overlay */}
-                <div className="w-full space-y-2 px-4 sm:px-10 py-2">
-                  <div className="flex flex-col items-center justify-center gap-6 border-b border-showman-gold/20 pb-4">
-                    {!isSequenceActive && (
-                      <h3 className="text-xl font-black text-showman-gold flex items-center uppercase tracking-widest">
-                        {tentativeWinners.length === quantity ? 'Final Winners List' : 'Current Winners'}
-                      </h3>
-                    )}
-
-                    <div className="flex flex-col items-center gap-4 w-full max-w-2xl px-4">
+                {/* Results Section (Always for Slot, Or after Wheel sequence ends) */}
+                {(rollMode === 'slot' || !isSequenceActive) && (
+                  <div className="w-full space-y-2 px-4 sm:px-10 py-2">
+                    <div className="flex flex-col items-center justify-center gap-6 border-b border-showman-gold/20 pb-4">
                       {!isSequenceActive && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-                          {/* SAVE BUTTON - Always show if there are some winners */}
-                          {tentativeWinners.length > 0 && (
-                            <motion.button
-                              initial={{ scale: 0.5, opacity: 0 }}
-                              animate={{ scale: 1, opacity: 1 }}
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={handleConfirmWinners}
-                              disabled={isConfirming}
-                              className={`bg-gradient-to-r from-showman-gold via-showman-gold-light to-showman-gold hover:from-showman-gold-dark hover:to-showman-gold text-showman-black font-black py-4 px-6 rounded-2xl shadow-[0_0_40px_rgba(245,158,11,0.4)] hover:shadow-[0_0_60px_rgba(245,158,11,0.6)] transition-all flex items-center justify-center space-x-3 border-4 border-showman-gold/30 text-lg ${tentativeWinners.length === (typeof quantity === 'string' ? parseInt(quantity) : quantity) ? 'sm:col-span-2' : ''}`}
-                            >
-                              <CheckCircle className="w-6 h-6" />
-                              <span>{isConfirming ? 'SAVING...' : 'SAVE WINNERS'}</span>
-                            </motion.button>
-                          )}
-
-                          {/* TAMBAH ROLL BUTTON - Show if winners removed and still have quota */}
-                          {tentativeWinners.length < (typeof quantity === 'string' ? parseInt(quantity) : quantity) && (
-                            <motion.button
-                              initial={{ scale: 0.5, opacity: 0 }}
-                              animate={{ scale: 1, opacity: 1 }}
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => {
-                                setMessage(null);
-                                setIsRolling(true);
-                                setIsSequenceActive(true);
-                              }}
-                              disabled={isConfirming || stats.eligibleParticipants === 0}
-                              className="bg-gradient-to-r from-showman-red to-showman-red-dark hover:from-showman-red-dark hover:to-showman-red text-showman-gold font-black py-4 px-6 rounded-2xl shadow-[0_0_40px_rgba(239,68,68,0.4)] hover:shadow-[0_0_60px_rgba(239,68,68,0.6)] transition-all flex items-center justify-center space-x-3 border-4 border-white/10 text-lg"
-                            >
-                              <Sparkles className="w-6 h-6" />
-                              <span>Roll Lagi</span>
-                            </motion.button>
-                          )}
-                        </div>
+                        <h3 className="text-xl font-black text-showman-gold flex items-center uppercase tracking-widest">
+                          {tentativeWinners.length === quantity ? 'Final Winners List' : 'Current Winners'}
+                        </h3>
                       )}
 
-                      {/* Winners Count - Centered when sequence complete */}
-                      {!isSequenceActive && tentativeWinners.length > 0 && (
-                        <div className="flex items-center space-x-2 text-showman-gold/60">
-                          <Trophy className="w-4 h-4" />
-                          <span className="text-sm font-black uppercase tracking-[0.2em]">
-                            Winners: {tentativeWinners.length} / {quantity}
-                          </span>
-                        </div>
-                      )}
+                      <div className="flex flex-col items-center gap-4 w-full max-w-2xl px-4">
+                        {!isSequenceActive && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                            {/* SAVE BUTTON - Always show if there are some winners */}
+                            {tentativeWinners.length > 0 && (
+                              <motion.button
+                                initial={{ scale: 0.5, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={handleConfirmWinners}
+                                disabled={isConfirming}
+                                className={`bg-gradient-to-r from-showman-gold via-showman-gold-light to-showman-gold hover:from-showman-gold-dark hover:to-showman-gold text-showman-black font-black py-4 px-6 rounded-2xl shadow-[0_0_40px_rgba(245,158,11,0.4)] hover:shadow-[0_0_60px_rgba(245,158,11,0.6)] transition-all flex items-center justify-center space-x-3 border-4 border-showman-gold/30 text-lg ${tentativeWinners.length === (typeof quantity === 'string' ? parseInt(quantity) : quantity) ? 'sm:col-span-2' : ''}`}
+                              >
+                                <CheckCircle className="w-6 h-6" />
+                                <span>{isConfirming ? 'SAVING...' : 'SAVE WINNERS'}</span>
+                              </motion.button>
+                            )}
 
-                      {!isSequenceActive && (
-                        <button
-                          onClick={() => {
-                            setShowResults(false);
-                            setTentativeWinners([]);
-                            setIsPaused(false);
-                          }}
-                          className="text-white/40 hover:text-white/80 transition-all text-sm font-bold uppercase tracking-widest underline underline-offset-4"
-                        >
-                          Cancel and Close
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                            {/* TAMBAH ROLL BUTTON - Show if winners removed and still have quota */}
+                            {tentativeWinners.length < (typeof quantity === 'string' ? parseInt(quantity) : quantity) && (
+                              <motion.button
+                                initial={{ scale: 0.5, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => {
+                                  setMessage(null);
+                                  setIsRolling(true);
+                                  setIsSequenceActive(true);
+                                }}
+                                disabled={isConfirming || stats.eligibleParticipants === 0}
+                                className="bg-gradient-to-r from-showman-red to-showman-red-dark hover:from-showman-red-dark hover:to-showman-red text-showman-gold font-black py-4 px-6 rounded-2xl shadow-[0_0_40px_rgba(239,68,68,0.4)] hover:shadow-[0_0_60px_rgba(239,68,68,0.6)] transition-all flex items-center justify-center space-x-3 border-4 border-white/10 text-lg"
+                              >
+                                <Sparkles className="w-6 h-6" />
+                                <span>Roll Lagi</span>
+                              </motion.button>
+                            )}
+                          </div>
+                        )}
 
-                  {tentativeWinners.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10">
-                      <AnimatePresence mode="popLayout">
-                        {tentativeWinners.map((winner, index) => (
-                          <WinnerCard
-                            key={winner.id}
-                            participant={winner}
-                            index={index}
-                            onRemove={handleRemoveWinner}
-                            disabled={isRolling || isSequenceActive}
-                          />
-                        ))}
-                      </AnimatePresence>
-                    </div>
-                  ) : (
-                    isSequenceActive && (
-                      <div className="py-20 text-center">
-                        <motion.div
-                          animate={{ opacity: [0.4, 1, 0.4] }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                          className="text-showman-gold-cream/40 uppercase tracking-[0.3em] font-bold italic"
-                        >
-                          The curtain rises...
-                        </motion.div>
+                        {/* Winners Count - Centered when sequence complete */}
+                        {!isSequenceActive && tentativeWinners.length > 0 && (
+                          <div className="flex items-center space-x-2 text-showman-gold/60">
+                            <Trophy className="w-4 h-4" />
+                            <span className="text-sm font-black uppercase tracking-[0.2em]">
+                              Winners: {tentativeWinners.length} / {quantity}
+                            </span>
+                          </div>
+                        )}
+
+                        {!isSequenceActive && (
+                          <button
+                            onClick={() => {
+                              setShowResults(false);
+                              setTentativeWinners([]);
+                              setIsPaused(false);
+                            }}
+                            className="text-white/40 hover:text-white/80 transition-all text-sm font-bold uppercase tracking-widest underline underline-offset-4"
+                          >
+                            Cancel and Close
+                          </button>
+                        )}
                       </div>
-                    )
-                  )}
-                </div>
+                    </div>
+
+                    {tentativeWinners.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10">
+                        <AnimatePresence mode="popLayout">
+                          {tentativeWinners.map((winner, index) => (
+                            <WinnerCard
+                              key={winner.id}
+                              participant={winner}
+                              index={index}
+                              onRemove={handleRemoveWinner}
+                              disabled={isRolling || isSequenceActive}
+                            />
+                          ))}
+                        </AnimatePresence>
+                      </div>
+                    ) : (
+                      isSequenceActive && (
+                        <div className="py-20 text-center">
+                          <motion.div
+                            animate={{ opacity: [0.4, 1, 0.4] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                            className="text-showman-gold-cream/40 uppercase tracking-[0.3em] font-bold italic"
+                          >
+                            The curtain rises...
+                          </motion.div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
               </motion.div>
             </motion.div>
           )
