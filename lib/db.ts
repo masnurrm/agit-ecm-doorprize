@@ -23,6 +23,24 @@ const pool = mysql.createPool({
 
 // Initialize database schema
 export async function initDatabase() {
+  // Create a temporary connection to ensure the database exists
+  // This is necessary because the pool is configured with a specific database name
+  // and will fail to get a connection if that database doesn't exist yet.
+  const tempConfig = {
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'user',
+    password: process.env.DB_PASSWORD || 'password',
+  };
+
+  try {
+    const tempConn = await mysql.createConnection(tempConfig);
+    await tempConn.query(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME || 'luckydraw'}`);
+    await tempConn.end();
+  } catch (err) {
+    console.error('Warning: Could not ensure database existence in pre-step:', err);
+    // Continue anyway as the database might already exist or be handled by Docker
+  }
+
   const connection = await pool.getConnection();
   try {
     // Create participants table
