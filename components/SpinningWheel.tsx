@@ -20,12 +20,14 @@ interface SpinningWheelProps {
     onComplete: (participant: Participant) => void;
     onPointerTick?: (participant: Participant | null) => void;
     onStart?: () => void;
+    onTogglePause?: () => void;
     zoomCanvasRef?: React.RefObject<HTMLCanvasElement | null>;
 }
 
-export default function SpinningWheel({ participants, isRolling, isPaused = false, onComplete, onPointerTick, zoomCanvasRef, onStart }: SpinningWheelProps) {
+export default function SpinningWheel({ participants, isRolling, isPaused = false, onComplete, onPointerTick, zoomCanvasRef, onStart, onTogglePause }: SpinningWheelProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const bakedCanvasRef = useRef<HTMLCanvasElement | null>(null);
+    const logoImageRef = useRef<HTMLImageElement | null>(null);
     const [winner, setWinner] = useState<Participant | null>(null);
     const lastPointedRef = useRef<string | null>(null);
 
@@ -136,6 +138,15 @@ export default function SpinningWheel({ participants, isRolling, isPaused = fals
     };
 
     useEffect(() => {
+        // Load ECM logo
+        const logo = new Image();
+        logo.src = '/images/logo_ecm.png';
+        logo.onload = () => {
+            logoImageRef.current = logo;
+        };
+    }, []);
+
+    useEffect(() => {
         // Reset baked canvas when participants or their order changes
         bakedCanvasRef.current = null;
     }, [participants]);
@@ -181,11 +192,17 @@ export default function SpinningWheel({ participants, isRolling, isPaused = fals
             ctx.lineWidth = 4;
             ctx.stroke();
 
-            ctx.fillStyle = '#F59E0B';
-            ctx.font = 'bold 12px Inter';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('AGIT', centerX, centerY);
+            // Draw ECM logo instead of text
+            if (logoImageRef.current) {
+                const logoSize = 50; // Logo size
+                ctx.drawImage(
+                    logoImageRef.current,
+                    centerX - logoSize / 2,
+                    centerY - logoSize / 2,
+                    logoSize,
+                    logoSize
+                );
+            }
 
             // Pointer
             ctx.beginPath();
@@ -352,9 +369,9 @@ export default function SpinningWheel({ participants, isRolling, isPaused = fals
                 }
             } else if (!isRolling && !isSettlingRef.current) {
                 if (targetIndexRef.current === null) {
-                    // Force synchronization during idle to avoid divergence
-                    rotationRef.current += 0.001;
-                    zoomRotationRef.current = rotationRef.current;
+                    // Dramatic 10:1 Idle speeds
+                    rotationRef.current += 0.001; // Main Wheel: Active energy
+                    zoomRotationRef.current += 0.0001; // Viewfinder: Super-slow crawl
                 }
             }
 

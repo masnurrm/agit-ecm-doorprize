@@ -43,7 +43,7 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [rollMode, setRollMode] = useState<'slot' | 'wheel'>('slot');
+  const [rollMode, setRollMode] = useState<'slot' | 'wheel'>('wheel');
   const [revealedWinner, setRevealedWinner] = useState<Participant | null>(null);
   const [pointedParticipant, setPointedParticipant] = useState<Participant | null>(null);
   const zoomCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -212,14 +212,14 @@ export default function Home() {
     setShowResults(true);
     setIsSequenceActive(true);
 
-    // For wheel mode, we start in "passive spin" (isRolling=false)
-    // For slot mode, we start the roll immediately
-    setIsRolling(rollMode === 'slot');
+    // Don't start spinning automatically - require manual wheel click
+    setIsRolling(false);
   };
 
   useEffect(() => {
     const rollQuantity = typeof quantity === 'string' ? parseInt(quantity) : quantity;
     // Wait for rolling to stop AND confetti to finish AND reveal to finish
+    // Only auto-spin for slot mode, wheel mode requires manual click
     if (!isRolling && !showConfetti && !revealedWinner && isSequenceActive && tentativeWinners.length < (rollQuantity || 0) && rollMode === 'slot') {
       const timer = setTimeout(() => {
         setIsRolling(true);
@@ -229,7 +229,7 @@ export default function Home() {
       setIsSequenceActive(false);
       showMessage('success', 'Draw complete! All winners revealed.');
     }
-  }, [isRolling, showConfetti, revealedWinner, isSequenceActive, tentativeWinners.length, quantity]);
+  }, [isRolling, showConfetti, revealedWinner, isSequenceActive, tentativeWinners.length, quantity, rollMode]);
 
   // Stabilize the complete callback to prevent unnecessary re-effects in SlotMachine
   const handleSlotMachineComplete = (landedParticipant: Participant) => {
@@ -274,10 +274,12 @@ export default function Home() {
       const reason = isAlreadyTentative ? "Already drawn" : "Previous winner";
       showMessage('error', `${landedParticipant.name} is ${reason}. Re-rolling...`);
 
-      // Short delay before auto-retry
-      setTimeout(() => {
-        setIsRolling(true);
-      }, 1500);
+      // Short delay before auto-retry (only for slot mode)
+      if (rollMode === 'slot') {
+        setTimeout(() => {
+          setIsRolling(true);
+        }, 1500);
+      }
     }
   };
 
@@ -296,6 +298,10 @@ export default function Home() {
 
   const handleRemoveWinner = (id: string) => {
     setTentativeWinners((prev) => prev.filter((w) => w.id !== id));
+  };
+
+  const handleTogglePause = () => {
+    setIsPaused((prev) => !prev);
   };
 
   const handleConfirmWinners = async () => {
@@ -674,23 +680,25 @@ export default function Home() {
                             />
                           </div>
 
-                          {/* Roll Mode Toggle */}
-                          <div className="flex bg-showman-black border-2 border-showman-gold/20 rounded-xl p-1 relative">
-                            <div
-                              className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-showman-gold rounded-lg transition-all duration-300 ${rollMode === 'slot' ? 'left-1' : 'left-[calc(50%+4px)]'}`}
-                            ></div>
-                            <button
-                              onClick={() => setRollMode('slot')}
-                              className={`flex-1 relative z-10 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${rollMode === 'slot' ? 'text-showman-black' : 'text-showman-gold-cream/60 hover:text-showman-gold'}`}
-                            >
-                              Slot Machine
-                            </button>
-                            <button
-                              onClick={() => setRollMode('wheel')}
-                              className={`flex-1 relative z-10 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${rollMode === 'wheel' ? 'text-showman-black' : 'text-showman-gold-cream/60 hover:text-showman-gold'}`}
-                            >
-                              Spinning Wheel
-                            </button>
+                          {/* Roll Mode Toggle - Hidden but keeping the code */}
+                          <div className="hidden">
+                            <div className="flex bg-showman-black border-2 border-showman-gold/20 rounded-xl p-1 relative">
+                              <div
+                                className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-showman-gold rounded-lg transition-all duration-300 ${rollMode === 'slot' ? 'left-1' : 'left-[calc(50%+4px)]'}`}
+                              ></div>
+                              <button
+                                onClick={() => setRollMode('slot')}
+                                className={`flex-1 relative z-10 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${rollMode === 'slot' ? 'text-showman-black' : 'text-showman-gold-cream/60 hover:text-showman-gold'}`}
+                              >
+                                Slot Machine
+                              </button>
+                              <button
+                                onClick={() => setRollMode('wheel')}
+                                className={`flex-1 relative z-10 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${rollMode === 'wheel' ? 'text-showman-black' : 'text-showman-gold-cream/60 hover:text-showman-gold'}`}
+                              >
+                                Spinning Wheel
+                              </button>
+                            </div>
                           </div>
                         </div>
 
@@ -700,7 +708,7 @@ export default function Home() {
                           className="w-full bg-gradient-to-r from-showman-red to-showman-red-dark hover:from-showman-red-dark hover:to-showman-red text-showman-gold font-black py-4 px-4 rounded-2xl shadow-lg border-2 border-white/10 hover:border-showman-gold/50 transition-all duration-300 flex items-center justify-center space-x-2 group/btn active:scale-95"
                         >
                           <Sparkles className="w-5 h-5 group-hover/btn:animate-pulse" />
-                          <span className="tracking-widest uppercase text-xs">Roll Now</span>
+                          <span className="tracking-widest uppercase text-xs">Undi Sekarang!</span>
                         </button>
                       </motion.div>
                     )}
@@ -811,6 +819,7 @@ export default function Home() {
                                 onComplete={handleSlotMachineComplete}
                                 onPointerTick={(p) => setPointedParticipant(p)}
                                 onStart={() => setIsRolling(true)}
+                                onTogglePause={handleTogglePause}
                                 zoomCanvasRef={zoomCanvasRef}
                               />
                             </div>
@@ -827,7 +836,7 @@ export default function Home() {
                                 <div className="absolute top-4 left-6 z-20">
                                   <p className="text-showman-gold/40 text-[10px] font-black uppercase tracking-[0.4em] flex items-center">
                                     <span className="w-2 h-2 bg-showman-red rounded-full mr-2 animate-pulse"></span>
-                                    Live Needle View
+                                    Live View
                                   </p>
                                 </div>
 
