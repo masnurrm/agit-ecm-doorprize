@@ -199,12 +199,23 @@ export const participantsDb = {
       const piDigit = parseInt(PI_DIGITS[currentPosition % PI_DIGITS.length]);
 
       // 5. Generate random digit (0-9)
+      /* 
+      // OLD LOGIC: Match random digit with Pi digit
       const randomDigit = Math.floor(Math.random() * 10);
+      */
+
+      // NEW LOGIC: Simple check if Pi digit at this iteration is 7
+      // If the attendee registered at position X, and the digit of Pi at that index is 7
+      const randomDigit = 7;
 
       let winnerInfo = null;
 
       // 6. Check for match (Only for participants who aren't already winners)
+      /* 
+      // Original condition:
       if (randomDigit === piDigit && participant.is_winner !== 1) {
+      */
+      if (piDigit === 7 && participant.is_winner !== 1) {
         // 7. Select random available prize
         const [prizeRows]: any = await connection.query('SELECT * FROM prizes WHERE current_quota > 0 FOR UPDATE');
         if (prizeRows.length > 0) {
