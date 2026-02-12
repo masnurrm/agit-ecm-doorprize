@@ -15,6 +15,7 @@ interface Participant {
 
 interface SpinningWheelProps {
   participants: Participant[];
+  prizeName?: string;
   isRolling: boolean;
   isPaused?: boolean;
   onComplete: (participant: Participant) => void;
@@ -24,7 +25,7 @@ interface SpinningWheelProps {
   zoomCanvasRef?: React.RefObject<HTMLCanvasElement | null>;
 }
 
-export default function SpinningWheel({ participants, isRolling, isPaused = false, onComplete, onPointerTick, zoomCanvasRef, onStart, onTogglePause }: SpinningWheelProps) {
+export default function SpinningWheel({ participants, prizeName, isRolling, isPaused = false, onComplete, onPointerTick, zoomCanvasRef, onStart, onTogglePause }: SpinningWheelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bakedCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const logoImageRef = useRef<HTMLImageElement | null>(null);
@@ -43,7 +44,17 @@ export default function SpinningWheel({ participants, isRolling, isPaused = fals
   const startRotationRef = useRef(0);
   const finalRotationRef = useRef(0);
   const startTimeRef = useRef<number>(0);
-  const durationRef = useRef(10000); // 10 seconds
+
+  // Dynamic duration: 30s for Grand Prize, 10s otherwise
+  const getDuration = () => {
+    return prizeName?.toLowerCase().includes('grand prize') ? 30000 : 10000;
+  };
+  const durationRef = useRef(getDuration());
+
+  // Update duration when prize changes
+  useEffect(() => {
+    durationRef.current = getDuration();
+  }, [prizeName]);
 
   // Multi-color support (Red, Black, Dark Grey)
   const WHEEL_COLORS = ['#5f0000ff', '#0F0F0F'];

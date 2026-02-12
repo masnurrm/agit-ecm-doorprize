@@ -827,6 +827,7 @@ export default function Home() {
                             <div className="w-full flex justify-center">
                               <SpinningWheel
                                 participants={eligibleParticipants}
+                                prizeName={selectedPrize?.prize_name}
                                 isRolling={isRolling}
                                 isPaused={isPaused}
                                 onComplete={handleSlotMachineComplete}
