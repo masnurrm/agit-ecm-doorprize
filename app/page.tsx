@@ -679,7 +679,7 @@ export default function Home() {
                               min="1"
                               max={prize.current_quota}
                               value={quantity}
-                              placeholder="masukkan jumlah pemenang undian"
+                              placeholder="Enter amount of winners"
                               onChange={(e) => {
                                 const val = e.target.value;
                                 if (val === '') {
@@ -721,7 +721,7 @@ export default function Home() {
                           className="w-full bg-gradient-to-r from-showman-red to-showman-red-dark hover:from-showman-red-dark hover:to-showman-red text-showman-gold font-black py-4 px-4 rounded-2xl shadow-lg border-2 border-white/10 hover:border-showman-gold/50 transition-all duration-300 flex items-center justify-center space-x-2 group/btn active:scale-95"
                         >
                           <Sparkles className="w-5 h-5 group-hover/btn:animate-pulse" />
-                          <span className="tracking-widest uppercase text-xs">Undi Sekarang!</span>
+                          <span className="tracking-widest uppercase text-xs">Draw Now!</span>
                         </button>
                       </motion.div>
                     )}
@@ -892,7 +892,7 @@ export default function Home() {
                                         >
                                           <div className="bg-showman-gold/5 border border-showman-gold/10 p-2.5 rounded-xl flex items-center justify-between group hover:bg-showman-gold/10 transition-all">
                                             <div className="flex-1 min-w-0 pr-2">
-                                              <p className="text-showman-gold-cream font-bold text-sm uppercase truncate flex items-center gap-4">
+                                              <p className="text-showman-gold-cream font-bold text-sm truncate flex items-center gap-4">
                                                 <span className="whitespace-nowrap">{winner.name}</span>
                                                 <span className="text-white/20 font-light">|</span>
                                                 <span className="text-showman-gold/90 font-mono font-bold tracking-wider">{winner.nim}</span>
@@ -900,7 +900,7 @@ export default function Home() {
                                             </div>
                                             <button
                                               onClick={() => setTentativeWinners(prev => prev.filter(w => w.id !== winner.id))}
-                                              className="p-1 px-2 text-white/20 hover:text-showman-red transition-colors opacity-0 group-hover:opacity-100 text-[10px] font-black uppercase tracking-tighter"
+                                              className="p-1 px-2 text-white/20 hover:text-showman-red transition-colors opacity-0 group-hover:opacity-100 text-[10px] font-black tracking-tighter"
                                             >
                                               Remove
                                             </button>
