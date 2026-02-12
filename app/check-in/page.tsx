@@ -214,7 +214,7 @@ export default function CheckIn() {
                     <Search className="w-8 h-8 text-showman-gold" />
                   </div>
                   <h2 className="text-2xl font-black text-white uppercase tracking-wider">Validate Attendance</h2>
-                  <p className="text-showman-gold-cream/60 text-sm">Enter NIM or NPK to check registration status</p>
+                  <p className="text-showman-gold-cream/60 text-sm">Enter NPK to check registration status</p>
                 </div>
 
                 <div className="relative">
@@ -225,7 +225,7 @@ export default function CheckIn() {
                     type="text"
                     value={nim}
                     onChange={(e) => setNim(e.target.value)}
-                    placeholder="Masukkan NIM / NPK"
+                    placeholder="Enter NPK"
                     className="w-full bg-showman-black border-2 border-showman-gold/20 rounded-2xl py-4 pl-12 pr-4 text-white font-bold text-lg focus:border-showman-gold focus:ring-4 focus:ring-showman-gold/10 outline-none transition-all placeholder:text-white/10"
                     autoFocus
                   />
@@ -240,7 +240,7 @@ export default function CheckIn() {
                     <RefreshCw className="w-5 h-5 animate-spin" />
                   ) : (
                     <>
-                      <span>Check NIM / NPK</span>
+                      <span>Check NPK</span>
                       <ArrowRight className="w-5 h-5" />
                     </>
                   )}
@@ -282,7 +282,7 @@ export default function CheckIn() {
                         <Contact className="w-4 h-4 text-showman-gold-cream" />
                       </div>
                       <div>
-                        <p className="text-[9px] uppercase tracking-widest text-showman-gold-cream/40">NIM / NPK</p>
+                        <p className="text-[9px] uppercase tracking-widest text-showman-gold-cream/40">NPK</p>
                         <p className="text-sm font-bold text-white">{participant.nim}</p>
                       </div>
                     </div>
@@ -352,7 +352,7 @@ export default function CheckIn() {
                           required
                           value={newName}
                           onChange={(e) => setNewName(e.target.value)}
-                          placeholder="Nama Lengkap"
+                          placeholder="Full Name"
                           className="w-full bg-showman-black border-2 border-showman-gold/20 rounded-xl py-3 px-4 text-white font-bold focus:border-showman-gold outline-none transition-all"
                         />
                       </div>
