@@ -46,8 +46,8 @@ export default function SpinningWheel({ participants, isRolling, isPaused = fals
   const durationRef = useRef(10000); // 10 seconds
 
   // Multi-color support (Red, Black, Dark Grey)
-  const WHEEL_COLORS = ['#DC2626', '#0F0F0F', '#1F2937'];
-  const TEXT_COLOR = '#F59E0B'; // Showman Gold
+  const WHEEL_COLORS = ['#5f0000ff', '#0F0F0F'];
+  const TEXT_COLOR = '#ffffffff'; // Showman Gold
   const BORDER_COLOR = '#F59E0B';
 
   // Helper to notify about pointed participant
