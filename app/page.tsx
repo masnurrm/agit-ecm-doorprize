@@ -370,6 +370,9 @@ export default function Home() {
   };
 
   const selectedPrize = prizes.find((p) => p.id === selectedPrizeId);
+  const activeEligibleParticipants = eligibleParticipants.filter(
+    (p) => !tentativeWinners.some((tw) => tw.id === p.id)
+  );
 
   return (
     <div className="relative min-h-screen flex flex-col text-white selection:bg-showman-red selection:text-white">
@@ -808,7 +811,7 @@ export default function Home() {
                               className="w-full overflows-hidden"
                             >
                               <SlotMachine
-                                participants={eligibleParticipants}
+                                participants={activeEligibleParticipants}
                                 isRolling={isRolling}
                                 isPaused={isPaused}
                                 onComplete={handleSlotMachineComplete}
@@ -830,7 +833,7 @@ export default function Home() {
                             {/* LEFT SECTION: Spinning Wheel */}
                             <div className="w-full flex justify-center">
                               <SpinningWheel
-                                participants={eligibleParticipants}
+                                participants={activeEligibleParticipants}
                                 prizeName={selectedPrize?.prize_name}
                                 isRolling={isRolling}
                                 isPaused={isPaused}
@@ -981,7 +984,7 @@ export default function Home() {
                                   setIsRolling(true);
                                   setIsSequenceActive(true);
                                 }}
-                                disabled={isConfirming || stats.eligibleParticipants === 0}
+                                disabled={isConfirming || activeEligibleParticipants.length === 0}
                                 className="bg-gradient-to-r from-showman-red to-showman-red-dark hover:from-showman-red-dark hover:to-showman-red text-showman-gold font-black py-4 px-6 rounded-2xl shadow-[0_0_40px_rgba(239,68,68,0.4)] hover:shadow-[0_0_60px_rgba(239,68,68,0.6)] transition-all flex items-center justify-center space-x-3 border-4 border-white/10 text-lg"
                               >
                                 <Sparkles className="w-6 h-6" />
