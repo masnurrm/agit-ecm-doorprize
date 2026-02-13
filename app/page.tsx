@@ -174,7 +174,9 @@ export default function Home() {
       const response = await fetch('/api/participants/eligible');
       const data = await response.json();
       if (data.success) {
-        setEligibleParticipants(data.data);
+        // Randomize the arrangement of participants for the wheel/slot machine
+        const shuffled = [...data.data].sort(() => Math.random() - 0.5);
+        setEligibleParticipants(shuffled);
       }
     } catch (error) {
       console.error('Error loading participants:', error);
