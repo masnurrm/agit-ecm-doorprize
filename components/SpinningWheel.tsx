@@ -270,7 +270,7 @@ export default function SpinningWheel({ participants, prizeName, isRolling, isPa
 
         // Giant text for audience reading - Horizontal Format: Name | NPK
         zCtx.fillStyle = TEXT_COLOR;
-        zCtx.font = 'black 65px Outfit, sans-serif';
+        zCtx.font = '700 18px Outfit, sans-serif';
         zCtx.textAlign = 'right';
         zCtx.textBaseline = 'middle';
 
