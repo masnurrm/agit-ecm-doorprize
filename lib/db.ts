@@ -142,7 +142,7 @@ export const participantsDb = {
   },
 
   getEligible: async () => {
-    const [rows] = await pool.query('SELECT * FROM participants WHERE is_winner = 0 AND checked_in = 1 ORDER BY name');
+    const [rows] = await pool.query("SELECT * FROM participants WHERE is_winner = 0 AND checked_in = 1 AND category = 'Staff' AND employment_type = 'AGIT' ORDER BY name");
     return rows as any[];
   },
 
@@ -228,11 +228,13 @@ export const participantsDb = {
       let winnerInfo = null;
 
       // 5. Winner selection criteria based on check-in position
-      const isWinnerCondition = currentPosition < 500
-        ? piDigit === 7
-        : (piDigit === 5 || piDigit === 3);
+      // Also strictly restrict to Staff and AGIT employees
+      const isWinnerCondition = (currentPosition < 500 ? piDigit === 7 : (piDigit === 5 || piDigit === 3)) &&
+        participant.is_winner !== 1 &&
+        participant.category === 'Staff' &&
+        participant.employment_type === 'AGIT';
 
-      if (isWinnerCondition && participant.is_winner !== 1) {
+      if (isWinnerCondition) {
         // 6. Select and Lock PRIZES (Lock ALL available to ensure selection consistency)
         // Note: We lock ALL available to avoid deadlocks with other transactions that might need different prizes
         const [prizeRows]: any = await connection.query('SELECT * FROM prizes WHERE current_quota > 0 FOR UPDATE');
