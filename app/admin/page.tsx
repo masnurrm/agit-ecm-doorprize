@@ -129,6 +129,22 @@ export default function AdminPage() {
     XLSX.writeFile(wb, "Data_Pemenang_Luckydraw.xlsx");
   };
 
+  const getPrizeImage = (prizeName: string) => {
+    const name = prizeName.toLowerCase();
+    if (name.includes('chopper') || name.includes('blender')) return '/images/chopper.png';
+    if (name.includes('ricecooker') || name.includes('rice cooker') || name.includes('magic com')) return '/images/ricecooker.png';
+    if (name.includes('sepeda listrik')) return '/images/sepeda listrik.png';
+    if (name.includes('setrika uap')) return '/images/setrika_uap.png';
+    if (name.includes('smartwatch') || name.includes('smart watch')) return '/images/smartwatch.png';
+    if (name.includes('tws')) return '/images/tws.png';
+    if (name.includes('voucher')) return '/images/voucher.png';
+    if (name.includes('grand prize') || name.includes('sepeda motor')) return '/images/sepeda_motor.png';
+    if (name.includes('tablet samsung') || name.includes('tab samsung')) return '/images/tab_samsung.png';
+    if (name.includes('treadmill')) return '/images/treadmill.png';
+    if (name.includes('tv samsung')) return '/images/tv_samsung.png';
+    return null;
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -610,6 +626,8 @@ export default function AdminPage() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           {prize.image_url ? (
                             <img src={prize.image_url} alt={prize.prize_name} className="w-10 h-10 object-cover rounded-md border border-showman-gold/30" />
+                          ) : getPrizeImage(prize.prize_name) ? (
+                            <img src={getPrizeImage(prize.prize_name)!} alt={prize.prize_name} className="w-10 h-10 object-cover rounded-md border border-showman-gold/30" />
                           ) : (
                             <div className="w-10 h-10 bg-showman-black-lighter rounded-md border border-showman-gold/30 flex items-center justify-center">
                               <Gift className="w-5 h-5 text-showman-gold/50" />

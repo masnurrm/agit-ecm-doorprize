@@ -190,6 +190,10 @@ export default function Home() {
     if (name.includes('smartwatch') || name.includes('smart watch')) return '/images/smartwatch.png';
     if (name.includes('tws')) return '/images/tws.png';
     if (name.includes('voucher')) return '/images/voucher.png';
+    if (name.includes('grand prize') || name.includes('sepeda motor')) return '/images/sepeda_motor.png';
+    if (name.includes('tablet samsung') || name.includes('tab samsung')) return '/images/tab_samsung.png';
+    if (name.includes('treadmill')) return '/images/treadmill.png';
+    if (name.includes('tv samsung')) return '/images/tv_samsung.png';
     return null;
   };
 
