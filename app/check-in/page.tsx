@@ -157,10 +157,10 @@ export default function CheckIn() {
       <header className="bg-showman-black/80 backdrop-blur-md sticky top-0 z-30 shadow-2xl border-b-2 border-showman-gold/30">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center space-x-3 group">
-            <div className="bg-showman-red p-2 rounded-lg group-hover:scale-110 transition-transform">
-              <Trophy className="w-5 h-5 text-showman-gold" />
+            <div className="bg-showman-black p-2 rounded-lg group-hover:scale-110 transition-transform">
+              {/* <Trophy className="w-5 h-5 text-showman-gold" /> */}
             </div>
-            <span className="font-bold text-showman-gold tracking-wider uppercase hidden sm:block">Lucky Draw App</span>
+            {/* <span className="font-bold text-showman-gold tracking-wider uppercase hidden sm:block">Lucky Draw App</span> */}
           </Link>
 
           <div className="text-center flex flex-col items-center">
@@ -213,7 +213,7 @@ export default function CheckIn() {
                   <div className="bg-showman-gold/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 border-2 border-showman-gold/30">
                     <Search className="w-8 h-8 text-showman-gold" />
                   </div>
-                  <h2 className="text-2xl font-black text-white uppercase tracking-wider">Validate Attendance</h2>
+                  <h2 className="text-2xl font-black text-white uppercase tracking-wider">ECM 2026 Check In </h2>
                   <p className="text-showman-gold-cream/60 text-sm">Enter NPK to check registration status</p>
                 </div>
 

@@ -571,7 +571,7 @@ export default function Home() {
         {/* Prize Selection Grid */}
         {!showResults && (
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
+          <div className="flex flex-wrap justify-center gap-8 items-start">
             <AnimatePresence mode="popLayout">
               {prizes.map((prize) => (
                 <motion.div
@@ -596,7 +596,7 @@ export default function Home() {
                       }
                     }
                   }}
-                  className={`relative cursor-pointer group rounded-3xl p-6 transition-all duration-500 border-2 overflow-hidden flex flex-col ${selectedPrizeId === prize.id
+                  className={`relative cursor-pointer group rounded-3xl p-6 transition-all duration-500 border-2 overflow-hidden flex flex-col w-full sm:w-[380px] ${selectedPrizeId === prize.id
                     ? 'min-h-[480px] bg-gradient-to-br from-showman-red/30 via-showman-black to-showman-black border-showman-gold ring-8 ring-showman-gold/10 z-20 shadow-[0_20px_50px_rgba(245,158,11,0.2)]'
                     : 'min-h-[340px] bg-showman-black-light/80 backdrop-blur-sm border-showman-gold/20 hover:border-showman-gold/50 z-10'
                     }`}
