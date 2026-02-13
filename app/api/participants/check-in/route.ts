@@ -11,6 +11,15 @@ export async function POST(request: Request) {
 
     const result = await participantsDb.markAsCheckedIn(id);
 
+    // If already checked in but winner info is present, it's a "success" retry
+    if (result.alreadyCheckedIn && result.winnerInfo) {
+      return NextResponse.json({
+        success: true,
+        message: 'Checked in successfully (already recorded)',
+        data: result
+      });
+    }
+
     if (result.alreadyCheckedIn) {
       return NextResponse.json({
         success: false,
