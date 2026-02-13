@@ -57,7 +57,7 @@ export default function SpinningWheel({ participants, prizeName, isRolling, isPa
   }, [prizeName]);
 
   // Multi-color support (Red, Black, Dark Grey)
-  const WHEEL_COLORS = ['#5f0000ff', '#0F0F0F'];
+  const WHEEL_COLORS = ['#5f0000ff', '#0F0F0F', '#2b0091ff'];
   const TEXT_COLOR = '#ffffffff'; // Showman Gold
   const BORDER_COLOR = '#F59E0B';
 

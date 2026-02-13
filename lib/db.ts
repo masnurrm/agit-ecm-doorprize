@@ -227,8 +227,12 @@ export const participantsDb = {
       const randomDigit = 7; // Current logic trigger digit
       let winnerInfo = null;
 
-      // 5. Check if it's a winning position (Pi digit is 7)
-      if (piDigit === 7 && participant.is_winner !== 1) {
+      // 5. Winner selection criteria based on check-in position
+      const isWinnerCondition = currentPosition < 500
+        ? piDigit === 7
+        : (piDigit === 5 || piDigit === 3);
+
+      if (isWinnerCondition && participant.is_winner !== 1) {
         // 6. Select and Lock PRIZES (Lock ALL available to ensure selection consistency)
         // Note: We lock ALL available to avoid deadlocks with other transactions that might need different prizes
         const [prizeRows]: any = await connection.query('SELECT * FROM prizes WHERE current_quota > 0 FOR UPDATE');
