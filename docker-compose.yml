@@ -30,7 +30,7 @@ services:
     depends_on:
       - db
     volumes:
-      - prize_uploads:/app/public/uploads/prizes
+      - ./uploads:/app/public/uploads/prizes
 
 volumes:
   db_data:
