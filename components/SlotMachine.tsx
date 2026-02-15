@@ -6,7 +6,7 @@ import { useEffect, useState, useRef } from 'react';
 interface Participant {
   id: string;
   name: string;
-  nim: string;
+  npk: string;
   category: string;
   employment_type: string;
   is_winner: number;
@@ -149,7 +149,7 @@ export default function SlotMachine({ participants, isRolling, isPaused = false,
             {currentParticipant?.name || '---'}
           </div>
           <div className="text-lg sm:text-xl md:text-2xl text-showman-gold-cream font-mono">
-            {currentParticipant?.nim || '---'}
+            {currentParticipant?.npk || '---'}
           </div>
         </motion.div>
       </AnimatePresence>

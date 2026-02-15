@@ -19,7 +19,7 @@ import {
 import Link from 'next/link';
 
 export default function CheckIn() {
-  const [nim, setNim] = useState('');
+  const [npk, setNpk] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [participant, setParticipant] = useState<any>(null);
   const [searched, setSearched] = useState(false);
@@ -39,7 +39,7 @@ export default function CheckIn() {
 
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!nim.trim()) return;
+    if (!npk.trim()) return;
 
     setIsLoading(true);
     setParticipant(null);
@@ -47,7 +47,7 @@ export default function CheckIn() {
     setSearched(false);
 
     try {
-      const response = await fetch(`/api/participants/search?nim=${encodeURIComponent(nim)}`);
+      const response = await fetch(`/api/participants/search?npk=${encodeURIComponent(npk)}`);
       const data = await response.json();
 
       if (data.success) {
@@ -105,7 +105,7 @@ export default function CheckIn() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: newName,
-          nim: nim,
+          npk: npk,
           category: newCategory,
           employment_type: newType,
           checked_in: 1
@@ -133,7 +133,7 @@ export default function CheckIn() {
   };
 
   const resetPage = () => {
-    setNim('');
+    setNpk('');
     setParticipant(null);
     setSearched(false);
     setShowAddForm(false);
@@ -233,7 +233,7 @@ export default function CheckIn() {
 
                 <button
                   type="submit"
-                  disabled={isLoading || !nim.trim()}
+                  disabled={isLoading || !npk.trim()}
                   className="w-full bg-gradient-to-r from-showman-red to-showman-red-dark hover:from-showman-red-dark hover:to-showman-red text-showman-gold font-black py-4 rounded-2xl shadow-lg border-2 border-white/10 hover:border-showman-gold/50 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center space-x-3 uppercase tracking-widest"
                 >
                   {isLoading ? (

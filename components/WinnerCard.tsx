@@ -6,7 +6,7 @@ import { X, User } from 'lucide-react';
 interface Participant {
   id: string;
   name: string;
-  nim: string;
+  npk: string;
   category?: string;
   employment_type?: string;
 }
@@ -31,7 +31,7 @@ export default function WinnerCard({ participant, index, onRemove, disabled = fa
       }}
       className="relative group h-full"
     >
-      <div className="bg-showman-black-light rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-showman-gold/20 transition-all duration-300 overflow-hidden border-2 border-showman-gold/50 hover:border-showman-gold h-[180px] w-full flex flex-col">
+      <div className="bg-showman-black-light rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-showman-gold/20 transition-all duration-300 overflow-hidden border-2 border-showman-gold/50 hover:border-showman-gold h-[220px] w-full flex flex-col">
         <div className="p-6 flex-1 flex flex-col justify-center relative">
           <button
             onClick={() => onRemove(participant.id)}
@@ -42,8 +42,8 @@ export default function WinnerCard({ participant, index, onRemove, disabled = fa
             <X className="w-4 h-4" />
           </button>
 
-          <div className="text-center space-y-2">
-            <h3 className="text-xl font-black text-white leading-tight break-words">
+          <div className="text-center space-y-3">
+            <h3 className="text-2xl sm:text-3xl font-black text-white leading-tight break-words px-2">
               {participant.name}
             </h3>
             <div className="h-0.5 w-10 bg-showman-gold/30 mx-auto"></div>

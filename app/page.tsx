@@ -12,7 +12,7 @@ import Link from 'next/link';
 interface Participant {
   id: string;
   name: string;
-  nim: string;
+  npk: string;
   category: string;
   employment_type: string;
   is_winner: number;

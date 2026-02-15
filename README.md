@@ -42,7 +42,7 @@ A professional prize draw system with attendance verification built with Next.js
 
 5. **Open your browser**
    ```
-   http://localhost:3000
+   http://localhost
    ```
 
 ## 📖 How to Use

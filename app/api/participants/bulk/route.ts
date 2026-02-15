@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     const participantsWithIds = participants.map((p: any) => ({
       id: p.id || `p_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: p.name,
-      nim: p.nim,
+      npk: p.npk || p.nim,
       category: p.category || 'Staff',
       employment_type: p.employment_type || 'AGIT',
       checked_in: p.checked_in !== undefined ? p.checked_in : 0
