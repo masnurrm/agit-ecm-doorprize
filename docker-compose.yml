@@ -29,6 +29,9 @@ services:
       - DB_NAME=luckydraw
     depends_on:
       - db
+    volumes:
+      - ./uploads:/app/public/uploads/prizes
 
 volumes:
   db_data:
+  prize_uploads:

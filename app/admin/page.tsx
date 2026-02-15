@@ -27,7 +27,9 @@ interface Prize {
 interface Winner {
   id: string;
   name: string;
-  npk: string;
+  nim: string;
+  category: string;
+  employment_type: string;
   prize_name: string;
   won_at: string;
 }
@@ -115,10 +117,28 @@ export default function AdminPage() {
     reader.readAsArrayBuffer(file);
   };
 
+  const handleExportParticipants = () => {
+    const exportData = participants.map(p => ({
+      "Nama": p.name,
+      "NPK": p.nim,
+      "Status": p.is_winner ? "Winner" : "Eligible",
+      "Employment": p.employment_type,
+      "Check-in": p.checked_in ? "Checked In" : "Not Checked In",
+      "Category": p.category
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Participants");
+    XLSX.writeFile(wb, "Data_Peserta_Luckydraw.xlsx");
+  };
+
   const handleExportWinners = () => {
     const exportData = winners.map(winner => ({
       "Nama": winner.name,
-      "NPK": winner.npk,
+      "NPK": winner.nim,
+      "Kategori": winner.category,
+      "Status Kepegawaian": winner.employment_type,
       "Hadiah": winner.prize_name,
       "Tanggal undian": new Date(winner.won_at).toLocaleString('id-ID')
     }));
@@ -127,6 +147,36 @@ export default function AdminPage() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Winners");
     XLSX.writeFile(wb, "Data_Pemenang_Luckydraw.xlsx");
+  };
+
+  const handleExportPrizes = () => {
+    const exportData = prizes.map(p => ({
+      "Nama Hadiah": p.prize_name,
+      "Jumlah Diberikan": p.initial_quota - p.current_quota,
+      "Sisa Kuota": p.current_quota,
+      "Total Kuota": p.initial_quota
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Prizes");
+    XLSX.writeFile(wb, "Data_Hadiah_Luckydraw.xlsx");
+  };
+
+  const getPrizeImage = (prizeName: string) => {
+    const name = prizeName.toLowerCase();
+    if (name.includes('chopper') || name.includes('blender')) return '/images/chopper.png';
+    if (name.includes('ricecooker') || name.includes('rice cooker') || name.includes('magic com')) return '/images/ricecooker.png';
+    if (name.includes('sepeda listrik')) return '/images/sepeda listrik.png';
+    if (name.includes('setrika uap')) return '/images/setrika_uap.png';
+    if (name.includes('smartwatch') || name.includes('smart watch')) return '/images/smartwatch.png';
+    if (name.includes('tws')) return '/images/tws.png';
+    if (name.includes('voucher')) return '/images/voucher.png';
+    if (name.includes('grand prize') || name.includes('sepeda motor')) return '/images/sepeda_motor.png';
+    if (name.includes('tablet samsung') || name.includes('tab samsung')) return '/images/tab_samsung.png';
+    if (name.includes('treadmill')) return '/images/treadmill.png';
+    if (name.includes('tv samsung')) return '/images/tv_samsung.png';
+    return null;
   };
 
   useEffect(() => {
@@ -181,7 +231,7 @@ export default function AdminPage() {
       }
     } else {
       setFormData(type === 'participant'
-        ? { name: '', npk: '', category: 'Staff', employment_type: 'AGIT', is_winner: 0, checked_in: 0 }
+        ? { name: '', nim: '', category: 'Staff', employment_type: 'AGIT', is_winner: 0, checked_in: 0 }
         : { prizeName: '', quota: 1, currentQuota: 1 }
       );
       setPreviewUrl(null);
@@ -444,6 +494,14 @@ export default function AdminPage() {
                       <span>Import Excel</span>
                     </button>
                     <button
+                      onClick={handleExportParticipants}
+                      disabled={participants.length === 0}
+                      className="flex items-center space-x-2 bg-showman-gold hover:bg-showman-gold-dark text-showman-black border border-showman-gold-dark font-medium py-2 px-4 rounded-lg transition-all disabled:opacity-50"
+                    >
+                      <FileDown className="w-4 h-4" />
+                      <span>Export Participants</span>
+                    </button>
+                    <button
                       onClick={() => openModal('participant')}
                       className="flex items-center space-x-2 bg-showman-red hover:bg-showman-red-dark text-showman-gold font-medium py-2 px-4 rounded-lg transition-all shadow-md border border-showman-gold/50"
                     >
@@ -454,13 +512,23 @@ export default function AdminPage() {
                 )}
 
                 {activeTab === 'prizes' && (
-                  <button
-                    onClick={() => openModal('prize')}
-                    className="flex items-center space-x-2 bg-showman-red hover:bg-showman-red-dark text-showman-gold font-medium py-2 px-4 rounded-lg transition-all shadow-md border border-showman-gold/50"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add Prize</span>
-                  </button>
+                  <>
+                    <button
+                      onClick={handleExportPrizes}
+                      disabled={prizes.length === 0}
+                      className="flex items-center space-x-2 bg-showman-gold hover:bg-showman-gold-dark text-showman-black border border-showman-gold-dark font-medium py-2 px-4 rounded-lg transition-all disabled:opacity-50"
+                    >
+                      <FileDown className="w-4 h-4" />
+                      <span>Export Prizes</span>
+                    </button>
+                    <button
+                      onClick={() => openModal('prize')}
+                      className="flex items-center space-x-2 bg-showman-red hover:bg-showman-red-dark text-showman-gold font-medium py-2 px-4 rounded-lg transition-all shadow-md border border-showman-gold/50"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Prize</span>
+                    </button>
+                  </>
                 )}
                 {activeTab === 'winners' && (
                   <button
@@ -610,6 +678,8 @@ export default function AdminPage() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           {prize.image_url ? (
                             <img src={prize.image_url} alt={prize.prize_name} className="w-10 h-10 object-cover rounded-md border border-showman-gold/30" />
+                          ) : getPrizeImage(prize.prize_name) ? (
+                            <img src={getPrizeImage(prize.prize_name)!} alt={prize.prize_name} className="w-10 h-10 object-cover rounded-md border border-showman-gold/30" />
                           ) : (
                             <div className="w-10 h-10 bg-showman-black-lighter rounded-md border border-showman-gold/30 flex items-center justify-center">
                               <Gift className="w-5 h-5 text-showman-gold/50" />

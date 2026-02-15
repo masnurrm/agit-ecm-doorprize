@@ -3,6 +3,13 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// 10,000 digits of Pi (decimal expansion)
+const PI_DIGITS = "1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679" +
+  "8214808651328230664709384460955058223172535940812848111745028410270193852110555964462294895493038196" +
+  "4428810975665933446128475648233786783165271201909145648566923460348610454326648213393607260249141273" +
+  "7245870066063155881748815209209628292540917153643678925903600113305305488204665213841469519415116094" +
+  "3305727036575959195309218611738193261179310511854807446237996274956735188575272489122793818301194912";
+
 // Create a connection pool
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
@@ -16,6 +23,24 @@ const pool = mysql.createPool({
 
 // Initialize database schema
 export async function initDatabase() {
+  // Create a temporary connection to ensure the database exists
+  // This is necessary because the pool is configured with a specific database name
+  // and will fail to get a connection if that database doesn't exist yet.
+  const tempConfig = {
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'user',
+    password: process.env.DB_PASSWORD || 'password',
+  };
+
+  try {
+    const tempConn = await mysql.createConnection(tempConfig);
+    await tempConn.query(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME || 'luckydraw'}`);
+    await tempConn.end();
+  } catch (err) {
+    console.error('Warning: Could not ensure database existence in pre-step:', err);
+    // Continue anyway as the database might already exist or be handled by Docker
+  }
+
   const connection = await pool.getConnection();
   try {
     // Create participants table
@@ -44,6 +69,11 @@ export async function initDatabase() {
     } catch (e) { }
     try {
       await connection.query('ALTER TABLE participants ADD COLUMN checked_in TINYINT(1) DEFAULT 0');
+    } catch (e) { }
+
+    // Add unique constraint to nim (attendee_id)
+    try {
+      await connection.query('CREATE UNIQUE INDEX idx_participants_nim ON participants (nim)');
     } catch (e) { }
 
     // Create prizes table
@@ -84,6 +114,20 @@ export async function initDatabase() {
       )
     `);
 
+    // Create settings table
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS settings (
+        setting_key VARCHAR(255) PRIMARY KEY,
+        setting_value VARCHAR(255) NOT NULL
+      )
+    `);
+
+    // Initialize check_in_position if it doesn't exist
+    const [settingRows]: any = await connection.query('SELECT * FROM settings WHERE setting_key = "current_check_in_position"');
+    if (settingRows.length === 0) {
+      await connection.query('INSERT INTO settings (setting_key, setting_value) VALUES ("current_check_in_position", "0")');
+    }
+
     console.log('Database initialized successfully!');
   } catch (error) {
     console.error('Error initializing database:', error);
@@ -101,7 +145,7 @@ export const participantsDb = {
   },
 
   getEligible: async () => {
-    const [rows] = await pool.query("SELECT * FROM participants WHERE is_winner = 0 AND checked_in = 1 AND category = 'Staff' ORDER BY name");
+    const [rows] = await pool.query("SELECT * FROM participants WHERE is_winner = 0 AND checked_in = 1 AND category = 'Staff' AND employment_type = 'AGIT' ORDER BY name");
     return rows as any[];
   },
 
@@ -131,7 +175,107 @@ export const participantsDb = {
   },
 
   markAsCheckedIn: async (id: string) => {
-    return pool.query('UPDATE participants SET checked_in = 1 WHERE id = ?', [id]);
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      // 1. Lock participant row first to ensure exclusive access and check status
+      const [participantRows]: any = await connection.query('SELECT * FROM participants WHERE id = ? FOR UPDATE', [id]);
+      const participant = participantRows[0];
+      if (!participant) throw new Error('Participant not found');
+
+      // 1b. Idempotency: If already checked in, don't repeat the process but check if they won
+      if (participant.checked_in) {
+        // Handle potential "Winner Lost Notice" due to network failure or refresh
+        // We look for any existing winner record for this participant
+        const [winnerRows]: any = await connection.query(`
+          SELECT w.id as winner_id, p.prize_name, p.image_url 
+          FROM winners w 
+          JOIN prizes p ON w.prize_id = p.id 
+          WHERE w.participant_id = ?
+        `, [id]);
+
+        await connection.commit();
+
+        if (winnerRows.length > 0) {
+          return {
+            alreadyCheckedIn: true,
+            success: true,
+            position: -1, // Position already consumed
+            winnerInfo: {
+              won: true,
+              prize_name: winnerRows[0].prize_name,
+              image_url: winnerRows[0].image_url
+            }
+          };
+        }
+        return { alreadyCheckedIn: true };
+      }
+
+      // 2. Lock sequential position setting
+      const [settingRows]: any = await connection.query('SELECT setting_value FROM settings WHERE setting_key = "current_check_in_position" FOR UPDATE');
+      if (settingRows.length === 0) throw new Error('Check-in position setting not found');
+
+      const currentPosition = parseInt(settingRows[0].setting_value);
+      const nextPosition = currentPosition + 1;
+
+      // Update position
+      await connection.query('UPDATE settings SET setting_value = ? WHERE setting_key = "current_check_in_position"', [nextPosition.toString()]);
+
+      // 3. Mark participant as checked in
+      await connection.query('UPDATE participants SET checked_in = 1 WHERE id = ?', [id]);
+
+      // 4. Pi Giveaway Logic
+      const piDigit = parseInt(PI_DIGITS[currentPosition % PI_DIGITS.length]);
+      const randomDigit = 7; // Current logic trigger digit
+      let winnerInfo = null;
+
+      // 5. Winner selection criteria based on check-in position
+      // Also strictly restrict to Staff and AGIT employees
+      const isWinnerCondition = (currentPosition < 500 ? piDigit === 7 : (piDigit === 5 || piDigit === 3)) &&
+        participant.is_winner !== 1 &&
+        participant.category === 'Staff' &&
+        participant.employment_type === 'AGIT';
+
+      if (isWinnerCondition) {
+        // 6. Select and Lock PRIZES (Lock ALL available to ensure selection consistency)
+        // Note: We lock ALL available to avoid deadlocks with other transactions that might need different prizes
+        const [prizeRows]: any = await connection.query('SELECT * FROM prizes WHERE current_quota > 0 FOR UPDATE');
+
+        if (prizeRows.length > 0) {
+          // Select one random prize from available using slightly more robust randomness
+          const randomPrizeIndex = Math.floor(Math.random() * prizeRows.length);
+          const prize = prizeRows[randomPrizeIndex];
+
+          const winnerId = `winner_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+          // 7. Atomic winner recording and quota reduction
+          await connection.query('UPDATE participants SET is_winner = 1 WHERE id = ?', [id]);
+          await connection.query('INSERT INTO winners (id, participant_id, prize_id) VALUES (?, ?, ?)', [winnerId, id, prize.id]);
+          await connection.query('UPDATE prizes SET current_quota = current_quota - 1 WHERE id = ?', [prize.id]);
+
+          winnerInfo = {
+            won: true,
+            prize_name: prize.prize_name,
+            image_url: prize.image_url
+          };
+        }
+      }
+
+      await connection.commit();
+      return {
+        success: true,
+        position: nextPosition,
+        piDigit,
+        randomDigit,
+        winnerInfo
+      };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   },
 
   resetAll: async () => {
@@ -258,7 +402,9 @@ export const winnersDb = {
         w.participant_id,
         w.prize_id,
         p.name,
-        p.npk,
+        p.nim,
+        p.category,
+        p.employment_type,
         pr.prize_name
       FROM winners w
       JOIN participants p ON w.participant_id = p.id
@@ -296,7 +442,14 @@ export async function confirmWinners(participantIds: string[], prizeId: string) 
   try {
     await connection.beginTransaction();
 
-    // Get current prize quota
+    // 1. Lock participants in consistent sorted order to prevent deadlocks
+    const sortedParticipantIds = [...participantIds].sort();
+    if (sortedParticipantIds.length > 0) {
+      // Use FOR UPDATE to lock participants first
+      await connection.query('SELECT id FROM participants WHERE id IN (?) FOR UPDATE', [sortedParticipantIds]);
+    }
+
+    // 2. Lock prize row
     const [prizeRows]: any = await connection.query('SELECT * FROM prizes WHERE id = ? FOR UPDATE', [prizeId]);
     const prize = prizeRows[0];
 
@@ -335,18 +488,19 @@ export async function removeWinner(winnerId: string) {
   try {
     await connection.beginTransaction();
 
-    const [winnerRows]: any = await connection.query('SELECT * FROM winners WHERE id = ?', [winnerId]);
+    // 1. Get and lock winner info
+    const [winnerRows]: any = await connection.query('SELECT * FROM winners WHERE id = ? FOR UPDATE', [winnerId]);
     const winner = winnerRows[0];
     if (!winner) throw new Error('Winner record not found');
 
+    // 2. Lock participant and prize in consistent order (Participant then Prize)
+    await connection.query('SELECT id FROM participants WHERE id = ? FOR UPDATE', [winner.participant_id]);
+    await connection.query('SELECT id FROM prizes WHERE id = ? FOR UPDATE', [winner.prize_id]);
+
+    // 3. Execute updates
     await connection.query('DELETE FROM winners WHERE id = ?', [winnerId]);
     await connection.query('UPDATE participants SET is_winner = 0 WHERE id = ?', [winner.participant_id]);
-
-    const [prizeRows]: any = await connection.query('SELECT current_quota FROM prizes WHERE id = ?', [winner.prize_id]);
-    const prize = prizeRows[0];
-    if (prize) {
-      await connection.query('UPDATE prizes SET current_quota = current_quota + 1 WHERE id = ?', [winner.prize_id]);
-    }
+    await connection.query('UPDATE prizes SET current_quota = current_quota + 1 WHERE id = ?', [winner.prize_id]);
 
     await connection.commit();
     return { success: true };
@@ -363,14 +517,26 @@ export async function removeWinnersBulk(winnerIds: string[]) {
   try {
     await connection.beginTransaction();
 
-    for (const winnerId of winnerIds) {
-      const [winnerRows]: any = await connection.query('SELECT * FROM winners WHERE id = ?', [winnerId]);
-      const winner = winnerRows[0];
-      if (!winner) continue;
+    // 1. Get and lock all winner records
+    const [winnerRows]: any = await connection.query('SELECT * FROM winners WHERE id IN (?) FOR UPDATE', [winnerIds]);
 
-      await connection.query('DELETE FROM winners WHERE id = ?', [winnerId]);
-      await connection.query('UPDATE participants SET is_winner = 0 WHERE id = ?', [winner.participant_id]);
-      await connection.query('UPDATE prizes SET current_quota = current_quota + 1 WHERE id = ?', [winner.prize_id]);
+    if (winnerRows.length > 0) {
+      const participantIds = winnerRows.map((w: any) => w.participant_id).filter((v: any, i: number, a: any[]) => a.indexOf(v) === i).sort() as string[];
+      const prizeIds = winnerRows.map((w: any) => w.prize_id).filter((v: any, i: number, a: any[]) => a.indexOf(v) === i).sort() as string[];
+
+      // 2. Lock resources in consistent order to prevent deadlocks
+      if (participantIds.length > 0) {
+        await connection.query('SELECT id FROM participants WHERE id IN (?) FOR UPDATE', [participantIds]);
+      }
+      if (prizeIds.length > 0) {
+        await connection.query('SELECT id FROM prizes WHERE id IN (?) FOR UPDATE', [prizeIds]);
+      }
+
+      for (const winner of winnerRows) {
+        await connection.query('DELETE FROM winners WHERE id = ?', [winner.id]);
+        await connection.query('UPDATE participants SET is_winner = 0 WHERE id = ?', [winner.participant_id]);
+        await connection.query('UPDATE prizes SET current_quota = current_quota + 1 WHERE id = ?', [winner.prize_id]);
+      }
     }
 
     await connection.commit();

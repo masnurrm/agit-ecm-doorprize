@@ -46,9 +46,9 @@ export default function WinnerCard({ participant, index, onRemove, disabled = fa
             <h3 className="text-2xl sm:text-3xl font-black text-white leading-tight break-words px-2">
               {participant.name}
             </h3>
-            <div className="h-0.5 w-16 bg-showman-gold/30 mx-auto"></div>
-            <p className="text-xl text-showman-gold font-mono font-bold tracking-widest leading-none">
-              NPK: {participant.npk}
+            <div className="h-0.5 w-10 bg-showman-gold/30 mx-auto"></div>
+            <p className="text-lg text-showman-gold font-mono font-bold tracking-widest leading-none">
+              NPK: {participant.nim}
             </p>
           </div>
         </div>

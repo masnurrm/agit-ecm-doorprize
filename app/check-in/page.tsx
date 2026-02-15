@@ -25,6 +25,7 @@ export default function CheckIn() {
   const [searched, setSearched] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [winnerResult, setWinnerResult] = useState<any>(null);
 
   // Add Form State
   const [newName, setNewName] = useState('');
@@ -78,7 +79,12 @@ export default function CheckIn() {
       const data = await response.json();
       if (data.success) {
         setParticipant({ ...participant, checked_in: 1 });
-        showMessage('success', `${participant.name} checked in successfully!`);
+
+        if (data.data && data.data.winnerInfo) {
+          setWinnerResult(data.data.winnerInfo);
+        } else {
+          showMessage('success', `${participant.name} checked in successfully!`);
+        }
       } else {
         showMessage('error', data.error || 'Failed to check in');
       }
@@ -109,7 +115,11 @@ export default function CheckIn() {
       const data = await response.json();
 
       if (data.success) {
-        showMessage('success', 'Registration & Check-in successful!');
+        if (data.data && data.data.winnerInfo) {
+          setWinnerResult(data.data.winnerInfo);
+        } else {
+          showMessage('success', 'Registration & Check-in successful!');
+        }
         // Refresh by searching for the same NIM again to show full info
         await handleSearch();
       } else {
@@ -128,6 +138,7 @@ export default function CheckIn() {
     setSearched(false);
     setShowAddForm(false);
     setMessage(null);
+    setWinnerResult(null);
   };
 
   return (
@@ -146,10 +157,10 @@ export default function CheckIn() {
       <header className="bg-showman-black/80 backdrop-blur-md sticky top-0 z-30 shadow-2xl border-b-2 border-showman-gold/30">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center space-x-3 group">
-            <div className="bg-showman-red p-2 rounded-lg group-hover:scale-110 transition-transform">
-              <Trophy className="w-5 h-5 text-showman-gold" />
+            <div className="bg-showman-black p-2 rounded-lg group-hover:scale-110 transition-transform">
+              {/* <Trophy className="w-5 h-5 text-showman-gold" /> */}
             </div>
-            <span className="font-bold text-showman-gold tracking-wider uppercase hidden sm:block">Lucky Draw App</span>
+            {/* <span className="font-bold text-showman-gold tracking-wider uppercase hidden sm:block">Lucky Draw App</span> */}
           </Link>
 
           <div className="text-center flex flex-col items-center">
@@ -202,7 +213,7 @@ export default function CheckIn() {
                   <div className="bg-showman-gold/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 border-2 border-showman-gold/30">
                     <Search className="w-8 h-8 text-showman-gold" />
                   </div>
-                  <h2 className="text-2xl font-black text-white uppercase tracking-wider">Validate Attendance</h2>
+                  <h2 className="text-2xl font-black text-white uppercase tracking-wider">ECM 2026 Check In </h2>
                   <p className="text-showman-gold-cream/60 text-sm">Enter NPK to check registration status</p>
                 </div>
 
@@ -212,9 +223,9 @@ export default function CheckIn() {
                   </div>
                   <input
                     type="text"
-                    value={npk}
-                    onChange={(e) => setNpk(e.target.value)}
-                    placeholder="Masukkan NPK"
+                    value={nim}
+                    onChange={(e) => setNim(e.target.value)}
+                    placeholder="Enter NPK"
                     className="w-full bg-showman-black border-2 border-showman-gold/20 rounded-2xl py-4 pl-12 pr-4 text-white font-bold text-lg focus:border-showman-gold focus:ring-4 focus:ring-showman-gold/10 outline-none transition-all placeholder:text-white/10"
                     autoFocus
                   />
@@ -272,16 +283,7 @@ export default function CheckIn() {
                       </div>
                       <div>
                         <p className="text-[9px] uppercase tracking-widest text-showman-gold-cream/40">NPK</p>
-                        <p className="text-sm font-bold text-white">{participant.npk}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <div className="bg-white/5 p-2 rounded-lg">
-                        <Briefcase className="w-4 h-4 text-showman-gold-cream" />
-                      </div>
-                      <div>
-                        <p className="text-[9px] uppercase tracking-widest text-showman-gold-cream/40">Position</p>
-                        <p className="text-sm font-bold text-white">{participant.category}</p>
+                        <p className="text-sm font-bold text-white">{participant.nim}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
@@ -350,7 +352,7 @@ export default function CheckIn() {
                           required
                           value={newName}
                           onChange={(e) => setNewName(e.target.value)}
-                          placeholder="Nama Lengkap"
+                          placeholder="Full Name"
                           className="w-full bg-showman-black border-2 border-showman-gold/20 rounded-xl py-3 px-4 text-white font-bold focus:border-showman-gold outline-none transition-all"
                         />
                       </div>
@@ -442,6 +444,71 @@ export default function CheckIn() {
           </span>
         </motion.div>
       </Link>
+
+      {/* Winner Modal */}
+      <AnimatePresence>
+        {winnerResult && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/90 backdrop-blur-xl"
+              onClick={() => setWinnerResult(null)}
+            />
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0, rotate: -5 }}
+              animate={{ scale: 1, opacity: 1, rotate: 0 }}
+              exit={{ scale: 0.5, opacity: 0, rotate: 5 }}
+              className="relative bg-gradient-to-b from-showman-gold to-showman-gold-dark p-1 rounded-[2.5rem] shadow-[0_0_100px_rgba(212,175,55,0.5)] max-w-md w-full overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-[url('/images/Background Doorprize-05.png')] opacity-10 mix-blend-overlay" />
+
+              <div className="bg-showman-black/90 rounded-[2.3rem] p-8 relative overflow-hidden flex flex-col items-center text-center">
+                {/* Decorative Elements */}
+                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-showman-gold to-transparent opacity-50" />
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
+                  transition={{ repeat: Infinity, duration: 4 }}
+                  className="w-24 h-24 bg-showman-gold rounded-full flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(212,175,55,0.4)] border-4 border-showman-gold-cream"
+                >
+                  <Trophy className="w-12 h-12 text-showman-black" />
+                </motion.div>
+
+                <h3 className="text-4xl font-black text-showman-gold uppercase tracking-tighter mb-2">
+                  CONGRATULATIONS!
+                </h3>
+                <p className="text-white/60 text-sm uppercase tracking-[0.3em] font-bold mb-8">
+                  Instant Win Prize
+                </p>
+
+                <div className="w-full bg-white/5 border border-showman-gold/20 rounded-2xl p-6 mb-8 relative group">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-showman-gold text-showman-black text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
+                    Your Reward
+                  </div>
+                  {winnerResult.image_url && (
+                    <img
+                      src={winnerResult.image_url}
+                      alt={winnerResult.prize_name}
+                      className="w-full aspect-video object-contain mb-4 rounded-lg bg-black/40 p-2"
+                    />
+                  )}
+                  <h4 className="text-2xl font-black text-white uppercase tracking-tight">
+                    {winnerResult.prize_name}
+                  </h4>
+                </div>
+
+                <button
+                  onClick={() => setWinnerResult(null)}
+                  className="w-full bg-showman-gold hover:bg-showman-gold-cream text-showman-black font-black py-4 rounded-xl transition-all uppercase tracking-[0.2em] shadow-lg active:scale-95"
+                >
+                  AWESOME!
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

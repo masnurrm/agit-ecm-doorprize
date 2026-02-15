@@ -33,10 +33,19 @@ export async function POST(request: Request) {
       category || 'Staff',
       employment_type || 'AGIT',
       is_winner !== undefined ? is_winner : 0,
-      checked_in !== undefined ? checked_in : 0
+      0 // Default to not checked in initially
     );
 
-    return NextResponse.json({ success: true, message: 'Participant added successfully' });
+    let checkInData = null;
+    if (checked_in) {
+      checkInData = await participantsDb.markAsCheckedIn(id);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Participant added successfully',
+      data: checkInData
+    });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

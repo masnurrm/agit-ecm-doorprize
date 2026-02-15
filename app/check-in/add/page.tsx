@@ -20,7 +20,7 @@ export default function AddParticipantPage() {
 
   // Form State
   const [name, setName] = useState('');
-  const [npk, setNpk] = useState('');
+  const [nim, setNim] = useState('');
   const [category, setCategory] = useState('Staff');
   const [employmentType, setEmploymentType] = useState('AGIT');
 
@@ -39,7 +39,7 @@ export default function AddParticipantPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
-          npk,
+          nim,
           category,
           employment_type: employmentType,
           checked_in: 1 // Automatically check-in upon manual registration
@@ -52,7 +52,7 @@ export default function AddParticipantPage() {
         showMessage('success', 'Registration & Check-in successful!');
         // Clear form
         setName('');
-        setNpk('');
+        setNim('');
         // Redirect back to check-in after a short delay
         setTimeout(() => {
           router.push('/check-in');
@@ -150,7 +150,7 @@ export default function AddParticipantPage() {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Nama Lengkap"
+                    placeholder="Full Name"
                     className="w-full bg-showman-black border-2 border-showman-gold/20 rounded-xl py-4 px-5 text-white font-bold text-lg focus:border-showman-gold focus:ring-4 focus:ring-showman-gold/10 outline-none transition-all placeholder:text-white/10"
                     autoFocus
                   />
@@ -161,9 +161,9 @@ export default function AddParticipantPage() {
                   <input
                     type="text"
                     required
-                    value={npk}
-                    onChange={(e) => setNpk(e.target.value)}
-                    placeholder="Nomor Pokok Karyawan"
+                    value={nim}
+                    onChange={(e) => setNim(e.target.value)}
+                    placeholder="NPK"
                     className="w-full bg-showman-black border-2 border-showman-gold/20 rounded-xl py-4 px-5 text-white font-bold text-lg focus:border-showman-gold focus:ring-4 focus:ring-showman-gold/10 outline-none transition-all placeholder:text-white/10"
                   />
                 </div>
