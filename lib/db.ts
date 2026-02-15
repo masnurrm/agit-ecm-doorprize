@@ -399,6 +399,8 @@ export const winnersDb = {
         w.prize_id,
         p.name,
         p.nim,
+        p.category,
+        p.employment_type,
         pr.prize_name
       FROM winners w
       JOIN participants p ON w.participant_id = p.id

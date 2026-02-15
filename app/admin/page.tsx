@@ -28,6 +28,8 @@ interface Winner {
   id: string;
   name: string;
   nim: string;
+  category: string;
+  employment_type: string;
   prize_name: string;
   won_at: string;
 }
@@ -115,10 +117,28 @@ export default function AdminPage() {
     reader.readAsArrayBuffer(file);
   };
 
+  const handleExportParticipants = () => {
+    const exportData = participants.map(p => ({
+      "Nama": p.name,
+      "NPK": p.nim,
+      "Status": p.is_winner ? "Winner" : "Eligible",
+      "Employment": p.employment_type,
+      "Check-in": p.checked_in ? "Checked In" : "Not Checked In",
+      "Category": p.category
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Participants");
+    XLSX.writeFile(wb, "Data_Peserta_Luckydraw.xlsx");
+  };
+
   const handleExportWinners = () => {
     const exportData = winners.map(winner => ({
       "Nama": winner.name,
       "NPK": winner.nim,
+      "Kategori": winner.category,
+      "Status Kepegawaian": winner.employment_type,
       "Hadiah": winner.prize_name,
       "Tanggal undian": new Date(winner.won_at).toLocaleString('id-ID')
     }));
@@ -127,6 +147,20 @@ export default function AdminPage() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Winners");
     XLSX.writeFile(wb, "Data_Pemenang_Luckydraw.xlsx");
+  };
+
+  const handleExportPrizes = () => {
+    const exportData = prizes.map(p => ({
+      "Nama Hadiah": p.prize_name,
+      "Jumlah Diberikan": p.initial_quota - p.current_quota,
+      "Sisa Kuota": p.current_quota,
+      "Total Kuota": p.initial_quota
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Prizes");
+    XLSX.writeFile(wb, "Data_Hadiah_Luckydraw.xlsx");
   };
 
   const getPrizeImage = (prizeName: string) => {
@@ -460,6 +494,14 @@ export default function AdminPage() {
                       <span>Import Excel</span>
                     </button>
                     <button
+                      onClick={handleExportParticipants}
+                      disabled={participants.length === 0}
+                      className="flex items-center space-x-2 bg-showman-gold hover:bg-showman-gold-dark text-showman-black border border-showman-gold-dark font-medium py-2 px-4 rounded-lg transition-all disabled:opacity-50"
+                    >
+                      <FileDown className="w-4 h-4" />
+                      <span>Export Participants</span>
+                    </button>
+                    <button
                       onClick={() => openModal('participant')}
                       className="flex items-center space-x-2 bg-showman-red hover:bg-showman-red-dark text-showman-gold font-medium py-2 px-4 rounded-lg transition-all shadow-md border border-showman-gold/50"
                     >
@@ -470,13 +512,23 @@ export default function AdminPage() {
                 )}
 
                 {activeTab === 'prizes' && (
-                  <button
-                    onClick={() => openModal('prize')}
-                    className="flex items-center space-x-2 bg-showman-red hover:bg-showman-red-dark text-showman-gold font-medium py-2 px-4 rounded-lg transition-all shadow-md border border-showman-gold/50"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add Prize</span>
-                  </button>
+                  <>
+                    <button
+                      onClick={handleExportPrizes}
+                      disabled={prizes.length === 0}
+                      className="flex items-center space-x-2 bg-showman-gold hover:bg-showman-gold-dark text-showman-black border border-showman-gold-dark font-medium py-2 px-4 rounded-lg transition-all disabled:opacity-50"
+                    >
+                      <FileDown className="w-4 h-4" />
+                      <span>Export Prizes</span>
+                    </button>
+                    <button
+                      onClick={() => openModal('prize')}
+                      className="flex items-center space-x-2 bg-showman-red hover:bg-showman-red-dark text-showman-gold font-medium py-2 px-4 rounded-lg transition-all shadow-md border border-showman-gold/50"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Prize</span>
+                    </button>
+                  </>
                 )}
                 {activeTab === 'winners' && (
                   <button
